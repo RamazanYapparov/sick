@@ -1,10 +1,12 @@
-package com.sick.siq.model
+package com.sick.model
 
 import java.net.URL
+import java.util.UUID
 
-data class Question(
+data class Question<T: Question.Type>(
+    val id: UUID = UUID.randomUUID(),
     val price: Int,
-    val type: Type,
+    val type: T,
     val contents: List<Content>,
     val answer: Answer,
 ) {

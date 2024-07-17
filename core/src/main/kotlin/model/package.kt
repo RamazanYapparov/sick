@@ -1,4 +1,4 @@
-package com.sick.siq.model
+package com.sick.model
 
 data class Package(
     val name: String,

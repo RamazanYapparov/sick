@@ -1,6 +1,6 @@
 package com.sick.com.sick.siq.mapper
 
-import com.sick.siq.model.*
+import com.sick.model.*
 import com.sick.siq.xml.model.Item
 import java.net.URL
 import com.sick.siq.xml.model.NumberSet as XmlNumberSet

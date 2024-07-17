@@ -1,11 +1,9 @@
 package com.sick.com.sick.siq.mapper
 
-import com.sick.siq.model.*
+import com.sick.model.*
 import com.sick.siq.xml.model.Package as XmlPackage
 import com.sick.siq.xml.model.Round as XmlRound
 import com.sick.siq.xml.model.Theme as XmlTheme
-import com.sick.siq.xml.model.Question as XmlQuestion
-import com.sick.siq.xml.model.NumberSet as XmlNumberSet
 
 fun XmlPackage.toDomain() = Package(
     name = name,

@@ -31,3 +31,4 @@ dependencyResolutionManagement {
 include(":composeApp")
 include(":siq")
 include(":siq:xml")
+include(":core")

@@ -1,4 +1,4 @@
-package com.sick.siq.model
+package com.sick.model
 
 enum class RoundType {
     Simple,

@@ -1,0 +1,116 @@
+package com.sick.engine
+
+import com.sick.event.*
+import com.sick.model.Player
+import com.sick.state.GamePhase
+import com.sick.test.QUESTION_IDS
+import com.sick.test.minimalPackage
+import kotlin.test.*
+
+class GameEngineRoundFlowTest {
+
+    // 2 rounds, 1 question each — minimal setup for testing round/game transitions
+    private fun engine(): GameEngine = GameEngine(minimalPackage(rounds = 2))
+
+    private fun GameEngine.joinAndStart(name: String = "Alice"): Player {
+        process(PlayerJoined(name))
+        val player = state.players.first()
+        process(StartGame)
+        return player
+    }
+
+    private fun GameEngine.playAndAccept(player: Player, roundIdx: Int, questionIdx: Int = 0) {
+        process(SelectActivePlayer(player.id))
+        process(QuestionSelected(QUESTION_IDS[roundIdx][questionIdx]))
+        process(PlayerBuzzed(player.id))
+        process(HostAccepted)
+    }
+
+    @Test
+    fun `completing last question in round transitions to RoundEnd`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+
+        engine.playAndAccept(player, roundIdx = 0)
+
+        assertEquals(GamePhase.RoundEnd, engine.phase)
+    }
+
+    @Test
+    fun `NextRound advances to next round and transitions to ChoosingPlayer`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+
+        val result = engine.process(NextRound)
+
+        assertTrue(result.isRight())
+        assertEquals(1, engine.state.currentRoundIndex)
+        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+    }
+
+    @Test
+    fun `completing last question in last round transitions to RoundEnd then GameOver after NextRound`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+        engine.process(NextRound)
+
+        engine.playAndAccept(player, roundIdx = 1)
+        assertEquals(GamePhase.RoundEnd, engine.phase)
+
+        engine.process(NextRound)
+        assertEquals(GamePhase.GameOver, engine.phase)
+    }
+
+    @Test
+    fun `isGameOver is true in GameOver phase`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+        engine.process(NextRound)
+        engine.playAndAccept(player, roundIdx = 1)
+        engine.process(NextRound)
+
+        assertTrue(engine.state.isGameOver)
+    }
+
+    @Test
+    fun `any event in GameOver returns InvalidEvent`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+        engine.process(NextRound)
+        engine.playAndAccept(player, roundIdx = 1)
+        engine.process(NextRound)
+        assertEquals(GamePhase.GameOver, engine.phase)
+
+        val result = engine.process(StartGame)
+        assertTrue(result.isLeft())
+        assertIs<GameError.InvalidEvent>(result.leftOrNull()!!)
+    }
+
+    @Test
+    fun `invalid event in RoundEnd returns InvalidEvent`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+        assertEquals(GamePhase.RoundEnd, engine.phase)
+
+        val result = engine.process(PlayerBuzzed(player.id))
+
+        assertTrue(result.isLeft())
+        assertIs<GameError.InvalidEvent>(result.leftOrNull()!!)
+    }
+
+    @Test
+    fun `played questions from round 1 do not count for round 2 completion`() {
+        val engine = engine()
+        val player = engine.joinAndStart()
+        engine.playAndAccept(player, roundIdx = 0)
+        engine.process(NextRound)
+
+        // After advancing to round 2, the round should NOT be complete
+        assertFalse(engine.state.isRoundComplete)
+    }
+}

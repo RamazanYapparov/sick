@@ -1,0 +1,133 @@
+package app
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Card
+import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean) {
+    val pad = if (compact) 12.dp else 24.dp
+    val titleSize = if (compact) 18.sp else 34.sp
+    val bodySize = if (compact) 12.sp else 22.sp
+    val timerSize = if (compact) 24.sp else 46.sp
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colors.background,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(pad),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(state.packName, fontSize = titleSize, fontWeight = FontWeight.Bold)
+                    val roundLine = buildString {
+                        if (state.roundName != null) {
+                            append("Round ${state.currentRoundIndex}/${state.totalRounds}: ${state.roundName}")
+                        } else {
+                            append("Lobby")
+                        }
+                    }
+                    Text(roundLine, fontSize = bodySize, color = Color(0xFFE7C98B))
+                    Text("Phase: ${state.phase.name}", fontSize = bodySize)
+                }
+                Scoreboard(state.players, state.activePlayerId, state.answeringPlayerId, compact)
+            }
+
+            if (state.currentQuestion == null) {
+                BoardOverview(state, compact)
+            } else {
+                CurrentQuestionPanel(state, compact, bodySize, timerSize)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Color(0xFF18313C),
+        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 20.dp)) {
+            Text(
+                if (state.boardThemes.isEmpty()) "Load a pack to begin." else "Board",
+                fontSize = if (compact) 16.sp else 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+            Spacer(Modifier.height(12.dp))
+            QuestionBoard(
+                themes = state.boardThemes,
+                enabled = false,
+                onQuestionClick = {},
+            )
+        }
+    }
+}
+
+@Composable
+private fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit) {
+    val question = state.currentQuestion ?: return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Color(0xFF18313C),
+        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        state.currentThemeName ?: "Question",
+                        fontSize = if (compact) 16.sp else 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE7C98B),
+                    )
+                    Text("${question.price} points", fontSize = bodySize, color = Color.White)
+                }
+                if (state.timerRemaining > 0) {
+                    Text("${state.timerRemaining}", fontSize = timerSize, fontWeight = FontWeight.Bold, color = Color(0xFFF36C5B))
+                }
+            }
+
+            Divider(color = Color(0x335F7D8D))
+
+            question.displayLines().forEach { line ->
+                Text(line, fontSize = bodySize, color = Color.White)
+            }
+        }
+    }
+}

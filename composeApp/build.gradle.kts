@@ -9,22 +9,18 @@ plugins {
 kotlin {
     jvmToolchain(21)
     jvm("desktop")
-    
+
     sourceSets {
         val desktopMain by getting
-        
-        commonMain.dependencies {
+
+        desktopMain.dependencies {
+            implementation(compose.desktop.currentOs)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.11.1")
-
-        }
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
             implementation(libs.arrow.core)
             implementation(project(":core"))
             implementation(project(":siq"))

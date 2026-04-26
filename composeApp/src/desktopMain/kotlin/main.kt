@@ -3,6 +3,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import app.DesktopSessionController
 
 fun main() = application {
     val scope = rememberCoroutineScope()

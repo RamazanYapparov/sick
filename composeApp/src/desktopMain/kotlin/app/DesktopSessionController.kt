@@ -1,3 +1,5 @@
+package app
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -155,7 +157,7 @@ class DesktopSessionController(
             replaceSession(pack)
             setInfo("Loaded pack: ${pack.name}")
         }.onFailure { error ->
-        error.printStackTrace()
+            error.printStackTrace()
             setError(error.message ?: "Failed to load pack")
         }
     }

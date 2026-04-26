@@ -89,4 +89,13 @@ class PlayerOpsTest {
         assertTrue(result.isLeft())
         assertIs<PlayerError.InvalidName>(result.leftOrNull()!!)
     }
+
+    @Test
+    fun `renamePlayer to the same name succeeds`() {
+        val withAlice = state.addPlayer("Alice").getOrNull()!!
+        val alice = withAlice.players.first()
+        val result = withAlice.renamePlayer(alice.id, "Alice")
+        assertTrue(result.isRight())
+        assertEquals("Alice", result.getOrNull()!!.findPlayer(alice.id)!!.name)
+    }
 }

@@ -86,6 +86,14 @@ class GameEngineLobbyTest {
     }
 
     @Test
+    fun `StartGame with no players is accepted by the engine`() {
+        val engine = engine()
+        val result = engine.process(StartGame)
+        assertTrue(result.isRight())
+        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+    }
+
+    @Test
     fun `failed events do not trigger listener`() {
         val engine = engine()
         var callCount = 0

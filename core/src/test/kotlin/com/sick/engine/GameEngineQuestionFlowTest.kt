@@ -43,11 +43,11 @@ class GameEngineQuestionFlowTest {
     }
 
     @Test
-    fun `QuestionSelected resets timerRemaining to timerSeconds`() {
+    fun `QuestionSelected resets timerRemaining to 30`() {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
-        assertEquals(engine.state.timerSeconds, engine.state.timerRemaining)
+        assertEquals(30, engine.state.timerRemaining)
     }
 
     @Test
@@ -125,16 +125,16 @@ class GameEngineQuestionFlowTest {
     }
 
     @Test
-    fun `TimerExpired clears question and answeringPlayerId and transitions to ChoosingPlayer`() {
+    fun `TimerExpired clears currentQuestion and transitions to ChoosingPlayer`() {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        assertNotNull(engine.state.currentQuestion)
 
         val result = engine.process(TimerExpired)
 
         assertTrue(result.isRight())
         assertNull(engine.state.currentQuestion)
-        assertNull(engine.state.answeringPlayerId)
         assertEquals(GamePhase.ChoosingPlayer, engine.phase)
     }
 

@@ -47,16 +47,25 @@ class GameEngine(pack: Package) {
     private fun validateEventForPhase(event: GameEvent): GameError? {
         val allowed = when (_phase) {
             GamePhase.Lobby -> setOf(
-                PlayerJoined::class, PlayerLeft::class, PlayerRenamed::class, StartGame::class
+                PlayerJoined::class,
+                PlayerLeft::class,
+                PlayerRenamed::class,
+                StartGame::class,
+                AdjustPlayerScore::class,
             )
-            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class)
-            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class)
+            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, AdjustPlayerScore::class)
+            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
-                PlayerBuzzed::class, TimerTick::class, TimerExpired::class
+                PlayerBuzzed::class, TimerTick::class, TimerExpired::class, SkipQuestion::class, AdjustPlayerScore::class
             )
-            GamePhase.PlayerAnswering -> setOf(HostAccepted::class, HostRejected::class)
-            GamePhase.RoundEnd -> setOf(NextRound::class)
-            GamePhase.GameOver -> emptySet()
+            GamePhase.PlayerAnswering -> setOf(
+                HostAccepted::class,
+                HostRejected::class,
+                SkipQuestion::class,
+                AdjustPlayerScore::class,
+            )
+            GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class)
+            GamePhase.GameOver -> setOf(AdjustPlayerScore::class)
         }
         return if (event::class !in allowed) GameError.InvalidEvent(event, _phase) else null
     }
@@ -87,6 +96,12 @@ class GameEngine(pack: Package) {
 
             is TimerTick    -> _state.copy(timerRemaining = (_state.timerRemaining - 1).coerceAtLeast(0))
             is TimerExpired -> _state.copy(answeringPlayerId = null, currentQuestion = null)
+            is SkipQuestion -> _state.copy(
+                answeringPlayerId = null,
+                currentQuestion = null,
+                timerRemaining = 0,
+                failedBuzzPlayerIds = emptySet(),
+            )
 
             is HostAccepted -> {
                 val playerId = ensureNotNull(_state.answeringPlayerId) { GameError.InvalidEvent(event, _phase) }
@@ -113,6 +128,10 @@ class GameEngine(pack: Package) {
                     )
             }
 
+            is AdjustPlayerScore -> _state.updatePlayerScore(event.playerId) { player ->
+                player.copy(score = player.score + event.delta)
+            }.mapLeft { GameError.PlayerError(it) }.bind()
+
             is NextRound -> _state.copy(currentRoundIndex = _state.currentRoundIndex + 1)
         }
     }
@@ -122,7 +141,16 @@ class GameEngine(pack: Package) {
         is SelectActivePlayer -> GamePhase.ChoosingQuestion
         is QuestionSelected -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
-        is TimerExpired -> GamePhase.ChoosingPlayer
+        is TimerExpired -> when {
+            _state.isGameOver -> GamePhase.GameOver
+            _state.isRoundComplete -> GamePhase.RoundEnd
+            else -> GamePhase.ChoosingQuestion
+        }
+        is SkipQuestion -> when {
+            _state.isGameOver -> GamePhase.GameOver
+            _state.isRoundComplete -> GamePhase.RoundEnd
+            else -> GamePhase.ChoosingQuestion
+        }
         is HostAccepted -> when {
             _state.isGameOver -> GamePhase.GameOver
             _state.isRoundComplete -> GamePhase.RoundEnd
@@ -131,7 +159,7 @@ class GameEngine(pack: Package) {
         is HostRejected -> GamePhase.ShowingQuestion
         is NextRound -> if (_state.isGameOver) GamePhase.GameOver else GamePhase.ChoosingPlayer
         is PlayerJoined, is PlayerLeft, is PlayerRenamed -> _phase
-        is TimerTick -> _phase
+        is TimerTick, is AdjustPlayerScore -> _phase
     }
 
     private fun findQuestion(id: UUID): Question<*>? =

@@ -14,7 +14,7 @@ fun XmlQuestion.toDomain() = Question(
 )
 
 fun XmlQuestion.toQuestionType(): Question.Type = when (type) {
-    null, "simple" -> Question.Type.Simple
+    null, "simple", "forAll" -> Question.Type.Simple
     "stake" -> Question.Type.Stake
     "noRisk" -> Question.Type.NoRisk
     "secret", "secretPublicPrice" /* todo account this type as well */ -> Question.Type.Secret(

@@ -25,6 +25,10 @@ kotlin {
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(libs.arrow.core)
+            implementation(project(":core"))
+            implementation(project(":siq"))
+            implementation(project(":server"))
         }
     }
 }

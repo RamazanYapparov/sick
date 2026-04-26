@@ -2,11 +2,16 @@
 compose-plugin = "1.6.11"
 junit = "4.13.2"
 kotlin = "2.2.0"
+ktor = "2.3.12"
 
 [libraries]
+arrow-core = { module = "io.arrow-kt:arrow-core", version = "1.2.4" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 
 
 [plugins]

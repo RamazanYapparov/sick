@@ -57,8 +57,7 @@ class GameEngineQuestionFlowTest {
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
         engine.process(PlayerBuzzed(player.id))
         engine.process(HostRejected)  // player now in failedBuzzPlayerIds
-        engine.process(TimerExpired)  // back to ChoosingPlayer
-        engine.process(SelectActivePlayer(player.id))
+        engine.process(TimerExpired)  // back to ChoosingQuestion for the same chooser
         engine.process(QuestionSelected(QUESTION_IDS[0][1]))  // new question
 
         assertTrue(engine.state.failedBuzzPlayerIds.isEmpty())
@@ -125,7 +124,7 @@ class GameEngineQuestionFlowTest {
     }
 
     @Test
-    fun `TimerExpired clears currentQuestion and transitions to ChoosingPlayer`() {
+    fun `TimerExpired clears currentQuestion and transitions to ChoosingQuestion`() {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
@@ -135,7 +134,7 @@ class GameEngineQuestionFlowTest {
 
         assertTrue(result.isRight())
         assertNull(engine.state.currentQuestion)
-        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+        assertEquals(GamePhase.ChoosingQuestion, engine.phase)
     }
 
     @Test
@@ -152,6 +151,23 @@ class GameEngineQuestionFlowTest {
         assertNull(engine.state.answeringPlayerId)
         assertNull(engine.state.currentQuestion)
         assertEquals(GamePhase.ChoosingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `after correct answer player picks next question without re-selecting chooser`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(PlayerBuzzed(player.id))
+        engine.process(HostAccepted)
+        assertEquals(GamePhase.ChoosingQuestion, engine.phase)
+        assertEquals(player.id, engine.state.activePlayerId)
+
+        // no SelectActivePlayer — answering player is already the chooser
+        val result = engine.process(QuestionSelected(QUESTION_IDS[0][1]))
+
+        assertTrue(result.isRight())
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
     }
 
     @Test

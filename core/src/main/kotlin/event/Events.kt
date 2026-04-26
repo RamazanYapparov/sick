@@ -18,10 +18,12 @@ data class QuestionSelected(val questionId: UUID) : GameEvent
 data class PlayerBuzzed(val playerId: UUID) : GameEvent
 data object TimerTick : GameEvent
 data object TimerExpired : GameEvent
+data object SkipQuestion : GameEvent
 
 // Host judging
 data object HostAccepted : GameEvent
 data object HostRejected : GameEvent
+data class AdjustPlayerScore(val playerId: UUID, val delta: Int) : GameEvent
 
 // Round/game flow
 data object NextRound : GameEvent

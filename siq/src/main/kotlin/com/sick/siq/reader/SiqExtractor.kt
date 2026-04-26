@@ -5,7 +5,7 @@ import java.io.File
 import java.net.URLDecoder
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.io.path.createDirectory
@@ -28,7 +28,7 @@ class SiqExtractor(private val source: String, private val destination: String) 
     }
 
     fun extract(): Path {
-        tempDir = Files.createTempDirectory(Paths.get(destination), "tmp")
+        tempDir = Files.createTempDirectory("tmp")
         ZipFile(source).use { zf ->
             zf.entries().asSequence().forEach { entry ->
                 if (entry.hasDirectory) {
@@ -42,7 +42,12 @@ class SiqExtractor(private val source: String, private val destination: String) 
 
     private fun ZipEntry.write(file: ZipFile, destination: Path) {
         file.getInputStream(this).use { inputStream ->
-            BufferedOutputStream(destination.resolve(name.decode()).outputStream()).use { outputStream ->
+            name.takeIf { "/" in name }
+                ?.split("/")?.first()
+                ?.let {
+                    destination.resolve(it).createIfNotExists()
+                }
+            BufferedOutputStream(destination.resolve(name.decode()).outputStream(StandardOpenOption.CREATE_NEW)).use { outputStream ->
                 val bytesIn = ByteArray(BUFFER_SIZE)
                 var read: Int
                 while (inputStream.read(bytesIn).also { read = it } != -1) {

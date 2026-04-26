@@ -13,7 +13,7 @@ import kotlin.test.*
 class GameTimerTest {
 
     private fun engineAtShowingQuestion(): GameEngine {
-        val engine = GameEngine(minimalPackage())
+        val engine = GameEngine(minimalPackage(questionsPerTheme = 2))
         engine.process(PlayerJoined("Alice"))
         val alice = engine.state.players.first()
         engine.process(StartGame)
@@ -33,7 +33,7 @@ class GameTimerTest {
         advanceTimeBy(3_001L)
 
         assertEquals(initialRemaining - 3, engine.state.timerRemaining)
-        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+        assertEquals(GamePhase.ChoosingQuestion, engine.phase)
     }
 
     @Test
@@ -64,7 +64,7 @@ class GameTimerTest {
         // With cancellation: 3 ticks total (job2 only) → timerRemaining = initialRemaining - 3
         // Without cancellation: 3 (job1) + 3 (job2) ticks → timerRemaining = initialRemaining - 6
         assertEquals(engine.state.timerSeconds - 3, engine.state.timerRemaining)
-        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+        assertEquals(GamePhase.ChoosingQuestion, engine.phase)
     }
 
     @Test
@@ -78,7 +78,7 @@ class GameTimerTest {
     }
 
     @Test
-    fun `timer drives full phase transition from ShowingQuestion to ChoosingPlayer`() = runTest {
+    fun `timer drives full phase transition from ShowingQuestion to ChoosingQuestion`() = runTest {
         val engine = engineAtShowingQuestion()
         val timer = GameTimer(engine, this)
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
@@ -86,6 +86,6 @@ class GameTimerTest {
         timer.start(1)
         advanceTimeBy(1_001L)  // task at t=1000 needs +1ms to be included
 
-        assertEquals(GamePhase.ChoosingPlayer, engine.phase)
+        assertEquals(GamePhase.ChoosingQuestion, engine.phase)
     }
 }

@@ -13,5 +13,5 @@ data class Round(
 
 data class Theme(
     val name: String,
-    val questions: List<Question>,
+    val questions: List<Question<*>>,
 )

@@ -1,7 +1,7 @@
 [versions]
 compose-plugin = "1.6.11"
 junit = "4.13.2"
-kotlin = "2.0.0"
+kotlin = "2.2.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

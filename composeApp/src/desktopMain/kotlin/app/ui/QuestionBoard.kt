@@ -1,7 +1,8 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
-package app
+package app.ui
 
+import app.state.BoardThemeState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -52,9 +53,9 @@ internal fun QuestionBoard(
                                 onClick = { onQuestionClick(question.id) },
                                 enabled = questionEnabled,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = if (question.played) Color(0xFFB3AA9E) else Color(0xFF235A73),
+                                    backgroundColor = if (question.played) Color(0xFFB3AA9E) else Palette.AccentBlue,
                                     contentColor = Color.White,
-                                    disabledBackgroundColor = if (question.played) Color(0xFF8B8378) else Color(0xFF235A73),
+                                    disabledBackgroundColor = if (question.played) Color(0xFF8B8378) else Palette.AccentBlue,
                                 ),
                             ) {
                                 Text(question.price.toString())

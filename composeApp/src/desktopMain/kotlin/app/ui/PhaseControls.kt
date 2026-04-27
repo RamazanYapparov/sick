@@ -1,5 +1,8 @@
-package app
+package app.ui
 
+import app.session.DesktopSessionController
+import app.state.DesktopUiState
+import app.state.hostSummary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,13 +82,13 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = controller::markAnswerCorrect,
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF2E7D32), contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Palette.Success, contentColor = Color.White),
                     ) {
                         Text("Correct")
                     }
                     Button(
                         onClick = controller::markAnswerWrong,
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFB3261E), contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Palette.Error, contentColor = Color.White),
                     ) {
                         Text("Wrong")
                     }

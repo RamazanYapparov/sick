@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
-package app
+package app.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,7 +42,7 @@ internal fun PlayerChipRow(
                 onClick = { onClick(player.id) },
                 enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (player.id == activePlayerId) Color(0xFFE8B23A) else Color(0xFF235A73),
+                    backgroundColor = if (player.id == activePlayerId) Palette.AccentYellow else Palette.AccentBlue,
                     contentColor = if (player.id == activePlayerId) Color(0xFF1B1B1B) else Color.White,
                 ),
             ) {

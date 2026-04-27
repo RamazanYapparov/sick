@@ -1,7 +1,9 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
-package app
+package app.ui
 
+import app.session.DesktopSessionController
+import app.state.DesktopUiState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +49,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
     var newPlayerName by remember { mutableStateOf("") }
     val renameDrafts = remember { mutableStateMapOf<String, String>() }
     val scoreDrafts = remember { mutableStateMapOf<String, String>() }
-    val lobbyEditable = state.phase == GamePhase.Lobby
+    val lobbyEditable = state.phase == GamePhase.Lobby && state.hasPack
 
     Surface(color = MaterialTheme.colors.background) {
         Row(
@@ -84,8 +86,8 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                             Icon(Icons.Default.ContentCopy, contentDescription = "Copy URL", modifier = Modifier.padding(4.dp))
                         }
                     }
-                    state.infoMessage?.let { Text(it, color = Color(0xFF2E7D32)) }
-                    state.errorMessage?.let { Text(it, color = Color(0xFFB3261E)) }
+                    state.infoMessage?.let { Text(it, color = Palette.Success) }
+                    state.errorMessage?.let { Text(it, color = Palette.Error) }
                 }
 
                 SectionCard("Players") {

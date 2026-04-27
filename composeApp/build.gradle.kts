@@ -12,6 +12,11 @@ kotlin {
 
     sourceSets {
         val desktopMain by getting
+        val desktopTest by getting
+
+        desktopTest.dependencies {
+            implementation(kotlin("test"))
+        }
 
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -35,6 +40,10 @@ kotlin {
             }
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 compose.desktop {

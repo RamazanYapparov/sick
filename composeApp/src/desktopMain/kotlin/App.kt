@@ -1,17 +1,18 @@
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import app.DesktopSessionController
-import app.DesktopUiState
-import app.HostWindowContent
-import app.SharedDisplayScreen
+import app.session.DesktopSessionController
+import app.state.DesktopUiState
+import app.ui.HostWindowContent
+import app.ui.Palette
+import app.ui.SharedDisplayScreen
 
 @Composable
 fun HostApp(controller: DesktopSessionController) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
-            primary = Color(0xFF235A73),
-            secondary = Color(0xFFE8B23A),
+            primary = Palette.AccentBlue,
+            secondary = Palette.AccentYellow,
             surface = Color(0xFFF6F1E8),
             background = Color(0xFFEDE3D1),
         )

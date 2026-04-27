@@ -1,5 +1,8 @@
-package app
+package app.ui
 
+import app.state.DesktopUiState
+import app.state.QuestionDisplayItem
+import app.state.displayContents
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,7 +59,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onVide
                             append("Lobby")
                         }
                     }
-                    Text(roundLine, fontSize = bodySize, color = Color(0xFFE7C98B))
+                    Text(roundLine, fontSize = bodySize, color = Palette.AccentGold)
                     Text("Phase: ${state.phase.name}", fontSize = bodySize)
                 }
                 Scoreboard(state.players, state.activePlayerId, state.answeringPlayerId, compact)
@@ -75,7 +78,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onVide
 private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = Color(0xFF18313C),
+        backgroundColor = Palette.DarkSurface,
         shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 20.dp)) {
@@ -101,7 +104,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = Color(0xFF18313C),
+        backgroundColor = Palette.DarkSurface,
         shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
     ) {
         Column(
@@ -118,7 +121,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                         state.currentThemeName ?: "Question",
                         fontSize = if (compact) 16.sp else 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE7C98B),
+                        color = Palette.AccentGold,
                     )
                     Text("${question.price} points", fontSize = bodySize, color = Color.White)
                 }
@@ -168,7 +171,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                     }
                     is QuestionDisplayItem.LocalVideo -> {
                         if (compact) {
-                            Text("▶ Video", fontSize = bodySize, color = Color(0xFFE7C98B))
+                            Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
                         } else {
                             val uri = remember(item.absolutePath) {
                                 java.io.File(item.absolutePath).toURI().toString()
@@ -182,7 +185,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                     }
                     is QuestionDisplayItem.RemoteVideo -> {
                         if (compact) {
-                            Text("▶ Video", fontSize = bodySize, color = Color(0xFFE7C98B))
+                            Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
                         } else {
                             VideoPlayer(
                                 uri = item.url.toString(),

@@ -1,4 +1,4 @@
-package app
+package app.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +48,7 @@ internal fun Scoreboard(
                             fontSize = if (compact) 12.sp else 18.sp,
                             color = Color.White,
                         )
-                        Text("${player.score}", fontSize = if (compact) 12.sp else 18.sp, color = Color(0xFFE7C98B))
+                        Text("${player.score}", fontSize = if (compact) 12.sp else 18.sp, color = Palette.AccentGold)
                     }
                 }
             }

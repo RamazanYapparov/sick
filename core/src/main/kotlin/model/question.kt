@@ -19,7 +19,7 @@ data class Question<T: Question.Type>(
         data class Secret(
             val themeOverride: String?,
             val exceptCurrent: Boolean,
-            val pricingRule: PricingRule
+            val pricingRule: PricingRule?
         ) : Type {
             data class PricingRule(
                 val minimum: Int,

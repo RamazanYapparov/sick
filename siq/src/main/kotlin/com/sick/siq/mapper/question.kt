@@ -17,11 +17,12 @@ fun XmlQuestion.toQuestionType(): Question.Type = when (type) {
     null, "simple", "forAll" -> Question.Type.Simple
     "stake" -> Question.Type.Stake
     "noRisk" -> Question.Type.NoRisk
-    "secret", "secretPublicPrice" /* todo account this type as well */ -> Question.Type.Secret(
-        exceptCurrent = firstParamByName("selectionMode").value == "exceptCurrent",
-        pricingRule = firstParamByType("numberSet").numberSet.toPricingRule(),
-        themeOverride = firstParamByName("theme").value
-    )
+    "secret", "secretPublicPrice" /* todo account this type as well */ ->
+        Question.Type.Secret(
+            exceptCurrent = (findParamByName("selectionMode")?.value ?: "exceptCurrent") == "exceptCurrent",
+            pricingRule = findParamByType("numberSet")?.numberSet?.toPricingRule(),
+            themeOverride = findParamByName("theme")?.value
+        )
 
     else -> throw UnsupportedOperationException("Question with type $type is unsupported")
 }
@@ -68,4 +69,5 @@ fun Item.toContent() = if (type == null) {
 
 private fun XmlQuestion.findParamByName(name: String) = params.param.find { it.name == name }
 private fun XmlQuestion.firstParamByName(name: String) = params.param.first { it.name == name }
+private fun XmlQuestion.findParamByType(type: String) = params.param.find { it.type == type }
 private fun XmlQuestion.firstParamByType(type: String) = params.param.first { it.type == type }

@@ -11,6 +11,8 @@ sealed interface QuestionDisplayItem {
     data class RemoteImage(val url: URL) : QuestionDisplayItem
     data class LocalVideo(val absolutePath: String) : QuestionDisplayItem
     data class RemoteVideo(val url: URL) : QuestionDisplayItem
+    data class LocalAudio(val absolutePath: String) : QuestionDisplayItem
+    data class RemoteAudio(val url: URL) : QuestionDisplayItem
 }
 
 fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
@@ -24,12 +26,14 @@ fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
                 Content.Type.Video -> QuestionDisplayItem.LocalVideo(
                     basePath?.resolve("Video")?.resolve(content.ref)?.toString() ?: content.ref
                 )
-                else -> TODO("Unsupported media type: ${content.type}")
+                Content.Type.Audio -> QuestionDisplayItem.LocalAudio(
+                    basePath?.resolve("Audio")?.resolve(content.ref)?.toString() ?: content.ref
+                )
             }
             is Content.Media.FileUrl -> when (content.type) {
                 Content.Type.Image -> QuestionDisplayItem.RemoteImage(content.url)
                 Content.Type.Video -> QuestionDisplayItem.RemoteVideo(content.url)
-                else -> TODO("Unsupported media type: ${content.type}")
+                Content.Type.Audio -> QuestionDisplayItem.RemoteAudio(content.url)
             }
         }
     }

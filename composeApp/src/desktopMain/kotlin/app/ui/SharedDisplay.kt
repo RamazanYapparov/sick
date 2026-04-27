@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onVideoFinished: () -> Unit = {}) {
+internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMediaFinished: () -> Unit = {}) {
     val pad = if (compact) 12.dp else 24.dp
     val titleSize = if (compact) 18.sp else 34.sp
     val bodySize = if (compact) 12.sp else 22.sp
@@ -68,7 +68,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onVide
             if (state.currentQuestion == null) {
                 BoardOverview(state, compact)
             } else {
-                CurrentQuestionPanel(state, compact, bodySize, timerSize, onVideoFinished)
+                CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
             }
         }
     }
@@ -99,7 +99,7 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
 }
 
 @Composable
-internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onVideoFinished: () -> Unit = {}) {
+internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onMediaFinished: () -> Unit = {}) {
     val question = state.currentQuestion ?: return
 
     Card(
@@ -179,7 +179,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                             VideoPlayer(
                                 uri = uri,
                                 modifier = Modifier.fillMaxWidth().height(360.dp),
-                                onFinished = onVideoFinished,
+                                onFinished = onMediaFinished,
                             )
                         }
                     }
@@ -190,7 +190,30 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                             VideoPlayer(
                                 uri = item.url.toString(),
                                 modifier = Modifier.fillMaxWidth().height(360.dp),
-                                onFinished = onVideoFinished,
+                                onFinished = onMediaFinished,
+                            )
+                        }
+                    }
+                    is QuestionDisplayItem.LocalAudio -> {
+                        if (compact) {
+                            Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
+                        } else {
+                            val uri = remember(item.absolutePath) {
+                                java.io.File(item.absolutePath).toURI().toString()
+                            }
+                            AudioPlayer(
+                                uri = uri,
+                                onFinished = onMediaFinished,
+                            )
+                        }
+                    }
+                    is QuestionDisplayItem.RemoteAudio -> {
+                        if (compact) {
+                            Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
+                        } else {
+                            AudioPlayer(
+                                uri = item.url.toString(),
+                                onFinished = onMediaFinished,
                             )
                         }
                     }

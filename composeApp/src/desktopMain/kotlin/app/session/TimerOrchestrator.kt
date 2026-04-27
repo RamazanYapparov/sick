@@ -14,11 +14,11 @@ class TimerOrchestrator(
         private const val TIMER_OFFSET_SECONDS = 3
     }
 
-    private var videoTimerPending = false
+    private var mediaTimerPending = false
 
     fun onPhaseChange(previous: GamePhase, current: GamePhase, wasPaused: Boolean) {
         if (current != GamePhase.ShowingQuestion) {
-            videoTimerPending = false
+            mediaTimerPending = false
             timer.stop()
             return
         }
@@ -29,24 +29,24 @@ class TimerOrchestrator(
             return
         }
 
-        if (wasPaused && !videoTimerPending) {
+        if (wasPaused && !mediaTimerPending) {
             if (state.timerRemaining > 0) timer.start(state.timerRemaining)
             return
         }
 
         if (previous != GamePhase.ShowingQuestion && state.timerRemaining > 0) {
-            if (state.currentQuestion?.hasVideo() == true) {
-                videoTimerPending = true
+            if (state.currentQuestion?.hasMedia() == true) {
+                mediaTimerPending = true
             } else {
-                videoTimerPending = false
+                mediaTimerPending = false
                 timer.start(state.timerRemaining, offsetSeconds = TIMER_OFFSET_SECONDS)
             }
         }
     }
 
-    fun onVideoFinished() {
-        if (!videoTimerPending) return
-        videoTimerPending = false
+    fun onMediaFinished() {
+        if (!mediaTimerPending) return
+        mediaTimerPending = false
         val state = engine.state
         if (state.timerRemaining > 0 && engine.phase == GamePhase.ShowingQuestion) {
             timer.start(state.timerRemaining)
@@ -54,10 +54,10 @@ class TimerOrchestrator(
     }
 
     fun stop() {
-        videoTimerPending = false
+        mediaTimerPending = false
         timer.stop()
     }
 }
 
-private fun Question<*>.hasVideo(): Boolean =
-    contents.any { it is Content.Media && it.type == Content.Type.Video }
+private fun Question<*>.hasMedia(): Boolean =
+    contents.any { it is Content.Media && it.type in setOf(Content.Type.Video, Content.Type.Audio) }

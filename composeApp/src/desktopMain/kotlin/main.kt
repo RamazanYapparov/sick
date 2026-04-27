@@ -22,7 +22,7 @@ fun main() = application {
             onCloseRequest = controller::hideDisplayWindow,
             title = "sick - display",
         ) {
-            SharedDisplayApp(uiState, onVideoFinished = controller::videoFinished)
+            SharedDisplayApp(uiState, onMediaFinished = controller::mediaFinished)
         }
     }
 

@@ -169,7 +169,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                             compact = true,
                             bodySize = 12.sp,
                             timerSize = 24.sp,
-                            onVideoFinished = controller::videoFinished,
+                            onMediaFinished = controller::mediaFinished,
                         )
                     } else {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

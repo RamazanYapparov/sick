@@ -123,7 +123,7 @@ class DesktopSessionController(
         )
     }
 
-    fun videoFinished() = timerOrchestrator.onVideoFinished()
+    fun mediaFinished() = timerOrchestrator.onMediaFinished()
 
     private fun loadPack(path: Path) {
         packLoader.load(path)

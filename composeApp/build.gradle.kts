@@ -25,6 +25,13 @@ kotlin {
             implementation(project(":core"))
             implementation(project(":siq"))
             implementation(project(":server"))
+
+            val javafxVersion = "21.0.5"
+            listOf("win", "linux", "mac").forEach { platform ->
+                listOf("base", "graphics", "swing", "media").forEach { module ->
+                    implementation("org.openjfx:javafx-$module:$javafxVersion:$platform")
+                }
+            }
         }
     }
 }
@@ -33,10 +40,18 @@ compose.desktop {
     application {
         mainClass = "MainKt"
 
+        jvmArgs(
+            "--add-opens", "javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.awt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED",
+        )
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.sick"
             packageVersion = "1.0.0"
+            modules("javafx.base", "javafx.graphics", "javafx.swing", "javafx.media")
         }
     }
 }

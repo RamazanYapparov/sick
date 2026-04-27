@@ -320,6 +320,8 @@ sealed interface QuestionDisplayItem {
     data class Text(val text: String) : QuestionDisplayItem
     data class LocalImage(val absolutePath: String) : QuestionDisplayItem
     data class RemoteImage(val url: java.net.URL) : QuestionDisplayItem
+    data class LocalVideo(val absolutePath: String) : QuestionDisplayItem
+    data class RemoteVideo(val url: java.net.URL) : QuestionDisplayItem
 }
 
 fun Question<*>.displayContents(basePath: java.nio.file.Path?): List<QuestionDisplayItem> =
@@ -330,10 +332,14 @@ fun Question<*>.displayContents(basePath: java.nio.file.Path?): List<QuestionDis
                 Content.Type.Image -> QuestionDisplayItem.LocalImage(
                     basePath?.resolve("Images")?.resolve(content.ref)?.toString() ?: content.ref
                 )
+                Content.Type.Video -> QuestionDisplayItem.LocalVideo(
+                    basePath?.resolve("Video")?.resolve(content.ref)?.toString() ?: content.ref
+                )
                 else -> TODO("Unsupported media type: ${content.type}")
             }
             is Content.Media.FileUrl -> when (content.type) {
                 Content.Type.Image -> QuestionDisplayItem.RemoteImage(content.url)
+                Content.Type.Video -> QuestionDisplayItem.RemoteVideo(content.url)
                 else -> TODO("Unsupported media type: ${content.type}")
             }
         }

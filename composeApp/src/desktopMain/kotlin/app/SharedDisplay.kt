@@ -166,6 +166,21 @@ private fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySi
                         else
                             Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
                     }
+                    is QuestionDisplayItem.LocalVideo -> {
+                        val uri = remember(item.absolutePath) {
+                            java.io.File(item.absolutePath).toURI().toString()
+                        }
+                        VideoPlayer(
+                            uri = uri,
+                            modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
+                        )
+                    }
+                    is QuestionDisplayItem.RemoteVideo -> {
+                        VideoPlayer(
+                            uri = item.url.toString(),
+                            modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
+                        )
+                    }
                 }
             }
         }

@@ -66,7 +66,7 @@ class BuzzRouteTest {
     @Test
     fun `POST buzz returns 200 when player buzzes in ShowingQuestion phase`() = testApplication {
         val (engine, playerId) = engineAtShowingQuestion()
-        application { installBuzzRoute(engine) }
+        application { installBuzzRoute(engine) { true } }
 
         val response = client.submitForm(
             url = "/buzz",
@@ -80,7 +80,7 @@ class BuzzRouteTest {
     @Test
     fun `POST buzz returns 400 when playerId is missing`() = testApplication {
         val (engine, _) = engineAtShowingQuestion()
-        application { installBuzzRoute(engine) }
+        application { installBuzzRoute(engine) { true} }
 
         val response = client.submitForm(url = "/buzz", formParameters = Parameters.Empty)
 
@@ -91,7 +91,7 @@ class BuzzRouteTest {
     @Test
     fun `POST buzz returns 400 when playerId is not a valid UUID`() = testApplication {
         val (engine, _) = engineAtShowingQuestion()
-        application { installBuzzRoute(engine) }
+        application { installBuzzRoute(engine) { true} }
 
         val response = client.submitForm(
             url = "/buzz",
@@ -106,7 +106,7 @@ class BuzzRouteTest {
     fun `POST buzz returns 400 when game is not in ShowingQuestion phase`() = testApplication {
         val pack = Package(name = "T", logo = "", tags = emptyList(), author = "", rounds = emptyList())
         val engine = GameEngine(pack)
-        application { installBuzzRoute(engine) }
+        application { installBuzzRoute(engine) { true} }
 
         val response = client.submitForm(
             url = "/buzz",

@@ -101,6 +101,47 @@ class GameEngineQuestionFlowTest {
     }
 
     @Test
+    fun `PauseTimer marks state paused without leaving ShowingQuestion`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+
+        val result = engine.process(PauseTimer)
+
+        assertTrue(result.isRight())
+        assertTrue(engine.state.isTimerPaused)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `PlayerBuzzed while paused returns InvalidEvent`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(PauseTimer)
+
+        val result = engine.process(PlayerBuzzed(player.id))
+
+        assertTrue(result.isLeft())
+        assertIs<GameError.InvalidEvent>(result.leftOrNull()!!)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `ResumeTimer clears paused flag`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(PauseTimer)
+
+        val result = engine.process(ResumeTimer)
+
+        assertTrue(result.isRight())
+        assertFalse(engine.state.isTimerPaused)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
     fun `TimerTick decrements timerRemaining and phase stays ShowingQuestion`() {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
@@ -111,6 +152,21 @@ class GameEngineQuestionFlowTest {
 
         assertTrue(result.isRight())
         assertEquals(before - 1, engine.state.timerRemaining)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `TimerTick while paused leaves timer untouched`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(PauseTimer)
+        val before = engine.state.timerRemaining
+
+        val result = engine.process(TimerTick)
+
+        assertTrue(result.isRight())
+        assertEquals(before, engine.state.timerRemaining)
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
     }
 

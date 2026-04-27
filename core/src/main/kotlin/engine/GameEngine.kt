@@ -56,7 +56,13 @@ class GameEngine(pack: Package) {
             GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, AdjustPlayerScore::class)
             GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
-                PlayerBuzzed::class, TimerTick::class, TimerExpired::class, SkipQuestion::class, AdjustPlayerScore::class
+                PlayerBuzzed::class,
+                PauseTimer::class,
+                ResumeTimer::class,
+                TimerTick::class,
+                TimerExpired::class,
+                SkipQuestion::class,
+                AdjustPlayerScore::class,
             )
             GamePhase.PlayerAnswering -> setOf(
                 HostAccepted::class,
@@ -67,7 +73,16 @@ class GameEngine(pack: Package) {
             GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class)
             GamePhase.GameOver -> setOf(AdjustPlayerScore::class)
         }
-        return if (event::class !in allowed) GameError.InvalidEvent(event, _phase) else null
+        if (event::class !in allowed) {
+            return GameError.InvalidEvent(event, _phase)
+        }
+
+        return when (event) {
+            is PauseTimer -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
+            is ResumeTimer -> if (!_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
+            is PlayerBuzzed -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
+            else -> null
+        }
     }
 
     private fun applyEvent(event: GameEvent): Either<GameError, GameState> = either {
@@ -85,6 +100,7 @@ class GameEngine(pack: Package) {
                     currentQuestion = question,
                     playedQuestionIds = _state.playedQuestionIds + event.questionId,
                     timerRemaining = _state.timerSeconds,
+                    isTimerPaused = false,
                     failedBuzzPlayerIds = emptySet(),
                 )
             }
@@ -94,12 +110,23 @@ class GameEngine(pack: Package) {
                 _state.copy(answeringPlayerId = event.playerId)
             }
 
-            is TimerTick    -> _state.copy(timerRemaining = (_state.timerRemaining - 1).coerceAtLeast(0))
-            is TimerExpired -> _state.copy(answeringPlayerId = null, currentQuestion = null)
+            is PauseTimer -> _state.copy(isTimerPaused = true)
+            is ResumeTimer -> _state.copy(isTimerPaused = false)
+            is TimerTick -> if (_state.isTimerPaused) {
+                _state
+            } else {
+                _state.copy(timerRemaining = (_state.timerRemaining - 1).coerceAtLeast(0))
+            }
+            is TimerExpired -> if (_state.isTimerPaused) {
+                _state
+            } else {
+                _state.copy(answeringPlayerId = null, currentQuestion = null, isTimerPaused = false)
+            }
             is SkipQuestion -> _state.copy(
                 answeringPlayerId = null,
                 currentQuestion = null,
                 timerRemaining = 0,
+                isTimerPaused = false,
                 failedBuzzPlayerIds = emptySet(),
             )
 
@@ -113,6 +140,7 @@ class GameEngine(pack: Package) {
                         activePlayerId = playerId,
                         answeringPlayerId = null,
                         currentQuestion = null,
+                        isTimerPaused = false,
                     )
             }
 
@@ -141,7 +169,9 @@ class GameEngine(pack: Package) {
         is SelectActivePlayer -> GamePhase.ChoosingQuestion
         is QuestionSelected -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
+        is PauseTimer, is ResumeTimer -> _phase
         is TimerExpired -> when {
+            _state.isTimerPaused -> GamePhase.ShowingQuestion
             _state.isGameOver -> GamePhase.GameOver
             _state.isRoundComplete -> GamePhase.RoundEnd
             else -> GamePhase.ChoosingQuestion

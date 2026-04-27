@@ -12,11 +12,13 @@ import com.sick.event.GameEvent
 import com.sick.event.HostAccepted
 import com.sick.event.HostRejected
 import com.sick.event.NextRound
+import com.sick.event.PauseTimer
 import com.sick.event.PlayerBuzzed
 import com.sick.event.PlayerJoined
 import com.sick.event.PlayerLeft
 import com.sick.event.PlayerRenamed
 import com.sick.event.QuestionSelected
+import com.sick.event.ResumeTimer
 import com.sick.event.SelectActivePlayer
 import com.sick.event.SkipQuestion
 import com.sick.event.StartGame
@@ -31,15 +33,19 @@ import com.sick.model.Theme
 import com.sick.server.GameServer
 import com.sick.state.GamePhase
 import kotlinx.coroutines.CoroutineScope
+import java.awt.FileDialog
+import java.net.NetworkInterface
 import java.nio.file.Path
 import java.util.UUID
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 class DesktopSessionController(
     private val scope: CoroutineScope,
     private val port: Int = 8080,
 ) {
+    companion object {
+        private const val TIMER_OFFSET_SECONDS = 3
+    }
+
     private val reader = SiqReader()
 
     private var loadedPack: Package? = null
@@ -48,7 +54,8 @@ class DesktopSessionController(
 
     private var engine: GameEngine = createEngine(emptyPack())
     private var timer: GameTimer = GameTimer(engine, scope)
-    private var server: GameServer = GameServer(engine, port)
+    private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
+    private var videoTimerPending = false
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
@@ -73,18 +80,15 @@ class DesktopSessionController(
     }
 
     fun loadPackFromDialog() {
-        val chooser = JFileChooser().apply {
-            dialogTitle = "Load SIQ pack"
-            fileFilter = FileNameExtensionFilter("SIQ packages", "siq")
-            isAcceptAllFileFilterUsed = true
+        val dialog = FileDialog(null as java.awt.Frame?, "Load SIQ pack", FileDialog.LOAD).apply {
+            filenameFilter = java.io.FilenameFilter { _, name -> name.endsWith(".siq", ignoreCase = true) }
         }
+        dialog.isVisible = true
 
-        val result = chooser.showOpenDialog(null)
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return
-        }
+        val dir = dialog.directory ?: return
+        val file = dialog.file ?: return
 
-        loadPack(chooser.selectedFile.toPath())
+        loadPack(Path.of(dir, file))
     }
 
     fun resetGame() {
@@ -107,7 +111,13 @@ class DesktopSessionController(
 
     fun selectQuestion(questionId: UUID) = process(QuestionSelected(questionId))
 
-    fun chooseAnsweringPlayer(playerId: UUID) = process(PlayerBuzzed(playerId))
+    fun chooseAnsweringPlayer(playerId: UUID) {
+        process(PlayerBuzzed(playerId))
+    }
+
+    fun pauseTimer() = process(PauseTimer)
+
+    fun resumeTimer() = process(ResumeTimer)
 
     fun markAnswerCorrect() = process(HostAccepted)
 
@@ -121,28 +131,63 @@ class DesktopSessionController(
 
     private fun process(event: GameEvent) {
         val previousPhase = engine.phase
+        val wasTimerPaused = engine.state.isTimerPaused
         engine.process(event).fold(
             ifLeft = { error ->
                 setError(error.message)
             },
             ifRight = {
-                handlePhaseChange(previousPhase, engine.phase)
+                handlePhaseChange(previousPhase, engine.phase, wasTimerPaused)
                 clearMessages()
                 publishState()
             },
         )
     }
 
-    private fun handlePhaseChange(previousPhase: GamePhase, newPhase: GamePhase) {
+    private fun handlePhaseChange(previousPhase: GamePhase, newPhase: GamePhase, wasTimerPaused: Boolean) {
         when (newPhase) {
             GamePhase.ShowingQuestion -> {
+                if (engine.state.isTimerPaused) {
+                    timer.stop()
+                    return
+                }
+
+                if (wasTimerPaused && !videoTimerPending) {
+                    val remaining = engine.state.timerRemaining
+                    if (remaining > 0) {
+                        timer.start(remaining)
+                    }
+                    return
+                }
+
                 if (previousPhase != GamePhase.ShowingQuestion && engine.state.timerRemaining > 0) {
-                    timer.start(engine.state.timerRemaining)
+                    if (engine.state.currentQuestion?.hasVideo() == true) {
+                        videoTimerPending = true
+                    } else {
+                        videoTimerPending = false
+                        timer.start(engine.state.timerRemaining, offsetSeconds = TIMER_OFFSET_SECONDS)
+                    }
                 }
             }
-            else -> timer.stop()
+            else -> {
+                videoTimerPending = false
+                timer.stop()
+            }
         }
     }
+
+    fun videoFinished() {
+        if (videoTimerPending) {
+            videoTimerPending = false
+            val remaining = engine.state.timerRemaining
+            if (remaining > 0 && engine.phase == GamePhase.ShowingQuestion) {
+                timer.start(remaining)
+            }
+        }
+    }
+
+    private fun Question<*>.hasVideo(): Boolean =
+        contents.any { it is Content.Media && it.type == Content.Type.Video }
 
     private fun loadPack(path: Path) {
         runCatching {
@@ -170,7 +215,7 @@ class DesktopSessionController(
 
         engine = createEngine(pack)
         timer = GameTimer(engine, scope)
-        server = GameServer(engine, port)
+        server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
         bindEngine(engine)
         server.start()
         publishState()
@@ -212,7 +257,8 @@ class DesktopSessionController(
                 )
             },
             timerRemaining = state.timerRemaining,
-            serverUrl = "http://localhost:$port",
+            isTimerPaused = state.isTimerPaused,
+            serverUrl = "http://${getLanIp()}:$port",
             hasPack = state.pack.rounds.isNotEmpty(),
         )
     }
@@ -231,6 +277,13 @@ class DesktopSessionController(
     private fun clearMessages() {
         uiState = uiState.copy(errorMessage = null, infoMessage = null)
     }
+
+    private fun getLanIp(): String =
+        NetworkInterface.getNetworkInterfaces()
+            ?.asSequence()
+            ?.flatMap { it.inetAddresses.asSequence() }
+            ?.firstOrNull { !it.isLoopbackAddress && it.hostAddress.contains('.') }
+            ?.hostAddress ?: "localhost"
 
     private fun createEngine(pack: Package): GameEngine = GameEngine(pack)
 
@@ -274,6 +327,7 @@ data class DesktopUiState(
     val currentThemeName: String?,
     val boardThemes: List<BoardThemeState>,
     val timerRemaining: Int,
+    val isTimerPaused: Boolean,
     val errorMessage: String?,
     val infoMessage: String?,
     val serverUrl: String,
@@ -296,6 +350,7 @@ data class DesktopUiState(
             currentThemeName = null,
             boardThemes = emptyList(),
             timerRemaining = 0,
+            isTimerPaused = false,
             errorMessage = null,
             infoMessage = null,
             serverUrl = "http://localhost:$port",

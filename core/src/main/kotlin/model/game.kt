@@ -12,6 +12,7 @@ data class GameState(
     val playedQuestionIds: Set<UUID> = emptySet(),
     val timerSeconds: Int = 30,
     val timerRemaining: Int = 0,
+    val isTimerPaused: Boolean = false,
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),
 ) {
     val currentRound: Round? get() = pack.rounds.getOrNull(currentRoundIndex)

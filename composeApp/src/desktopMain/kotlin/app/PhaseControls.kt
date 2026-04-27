@@ -45,7 +45,23 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                 )
             }
             GamePhase.ShowingQuestion -> {
-                Text("Question is live. Timer: ${state.timerRemaining}s")
+                val timerLabel = if (state.isTimerPaused) "Timer: ${state.timerRemaining}s (paused)" else "Timer: ${state.timerRemaining}s"
+                Text("Question is live. $timerLabel")
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (state.isTimerPaused) {
+                        Button(onClick = controller::resumeTimer) {
+                            Text("Resume")
+                        }
+                    } else {
+                        Button(onClick = controller::pauseTimer) {
+                            Text("Pause")
+                        }
+                    }
+                    Button(onClick = controller::skipQuestion) {
+                        Text("Skip Question")
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text("Choose answering player manually or wait for a phone buzz.")
                 Spacer(Modifier.height(8.dp))
@@ -53,11 +69,8 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     players = state.players.filter { it.id != state.answeringPlayerId },
                     activePlayerId = state.answeringPlayerId,
                     onClick = controller::chooseAnsweringPlayer,
+                    enabled = !state.isTimerPaused,
                 )
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = controller::skipQuestion) {
-                    Text("Skip Question")
-                }
             }
             GamePhase.PlayerAnswering -> {
                 val answeringName = state.players.firstOrNull { it.id == state.answeringPlayerId }?.name ?: "Unknown"

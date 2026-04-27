@@ -16,6 +16,8 @@ data class QuestionSelected(val questionId: UUID) : GameEvent
 
 // During question display
 data class PlayerBuzzed(val playerId: UUID) : GameEvent
+data object PauseTimer : GameEvent
+data object ResumeTimer : GameEvent
 data object TimerTick : GameEvent
 data object TimerExpired : GameEvent
 data object SkipQuestion : GameEvent

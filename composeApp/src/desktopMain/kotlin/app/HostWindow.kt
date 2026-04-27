@@ -18,10 +18,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -31,6 +35,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,7 +77,13 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                     }
                     Spacer(Modifier.height(8.dp))
                     Text("Phase: ${state.phase.name}")
-                    Text("Buzzer page: ${state.serverUrl}")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Buzzer page: ${state.serverUrl}")
+                        val clipboard = LocalClipboardManager.current
+                        IconButton(onClick = { clipboard.setText(AnnotatedString(state.serverUrl)) }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy URL", modifier = Modifier.padding(4.dp))
+                        }
+                    }
                     state.infoMessage?.let { Text(it, color = Color(0xFF2E7D32)) }
                     state.errorMessage?.let { Text(it, color = Color(0xFFB3261E)) }
                 }
@@ -142,14 +154,26 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Display Preview", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Current Question", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(
                     modifier = Modifier.fillMaxSize()
                         .border(1.dp, Color(0xFFB7AA93), RoundedCornerShape(20.dp))
                         .background(Color(0xFF1A2B35), RoundedCornerShape(20.dp))
                         .padding(12.dp),
                 ) {
-                    SharedDisplayScreen(state = state, compact = true)
+                    if (state.currentQuestion != null) {
+                        CurrentQuestionPanel(
+                            state = state,
+                            compact = true,
+                            bodySize = 12.sp,
+                            timerSize = 24.sp,
+                            onVideoFinished = controller::videoFinished,
+                        )
+                    } else {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No active question", color = Color(0xFF7A9BAA))
+                        }
+                    }
                 }
             }
         }

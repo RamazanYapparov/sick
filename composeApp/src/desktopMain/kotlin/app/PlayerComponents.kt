@@ -31,6 +31,7 @@ internal fun PlayerChipRow(
     players: List<Player>,
     activePlayerId: UUID?,
     onClick: (UUID) -> Unit,
+    enabled: Boolean = true,
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -39,6 +40,7 @@ internal fun PlayerChipRow(
         players.forEach { player ->
             Button(
                 onClick = { onClick(player.id) },
+                enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = if (player.id == activePlayerId) Color(0xFFE8B23A) else Color(0xFF235A73),
                     contentColor = if (player.id == activePlayerId) Color(0xFF1B1B1B) else Color.White,

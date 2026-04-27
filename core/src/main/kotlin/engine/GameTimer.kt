@@ -13,9 +13,10 @@ class GameTimer(
 ) {
     private var job: Job? = null
 
-    fun start(seconds: Int) {
+    fun start(seconds: Int, offsetSeconds: Int = 0) {
         stop()
         job = scope.launch {
+            if (offsetSeconds > 0) delay(offsetSeconds * 1000L)
             repeat(seconds) {
                 delay(1000)
                 engine.process(TimerTick)

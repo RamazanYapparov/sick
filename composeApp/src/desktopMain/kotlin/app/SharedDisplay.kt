@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean) {
+internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onVideoFinished: () -> Unit = {}) {
     val pad = if (compact) 12.dp else 24.dp
     val titleSize = if (compact) 18.sp else 34.sp
     val bodySize = if (compact) 12.sp else 22.sp
@@ -65,7 +65,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean) {
             if (state.currentQuestion == null) {
                 BoardOverview(state, compact)
             } else {
-                CurrentQuestionPanel(state, compact, bodySize, timerSize)
+                CurrentQuestionPanel(state, compact, bodySize, timerSize, onVideoFinished)
             }
         }
     }
@@ -96,7 +96,7 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
 }
 
 @Composable
-private fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit) {
+internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onVideoFinished: () -> Unit = {}) {
     val question = state.currentQuestion ?: return
 
     Card(
@@ -167,19 +167,29 @@ private fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySi
                             Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
                     }
                     is QuestionDisplayItem.LocalVideo -> {
-                        val uri = remember(item.absolutePath) {
-                            java.io.File(item.absolutePath).toURI().toString()
+                        if (compact) {
+                            Text("▶ Video", fontSize = bodySize, color = Color(0xFFE7C98B))
+                        } else {
+                            val uri = remember(item.absolutePath) {
+                                java.io.File(item.absolutePath).toURI().toString()
+                            }
+                            VideoPlayer(
+                                uri = uri,
+                                modifier = Modifier.fillMaxWidth().height(360.dp),
+                                onFinished = onVideoFinished,
+                            )
                         }
-                        VideoPlayer(
-                            uri = uri,
-                            modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
-                        )
                     }
                     is QuestionDisplayItem.RemoteVideo -> {
-                        VideoPlayer(
-                            uri = item.url.toString(),
-                            modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
-                        )
+                        if (compact) {
+                            Text("▶ Video", fontSize = bodySize, color = Color(0xFFE7C98B))
+                        } else {
+                            VideoPlayer(
+                                uri = item.url.toString(),
+                                modifier = Modifier.fillMaxWidth().height(360.dp),
+                                onFinished = onVideoFinished,
+                            )
+                        }
                     }
                 }
             }

@@ -21,7 +21,7 @@ fun HostApp(controller: DesktopSessionController) {
 }
 
 @Composable
-fun SharedDisplayApp(state: DesktopUiState) {
+fun SharedDisplayApp(state: DesktopUiState, onVideoFinished: () -> Unit = {}) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
             primary = Color(0xFF184A45),
@@ -32,6 +32,6 @@ fun SharedDisplayApp(state: DesktopUiState) {
             onBackground = Color(0xFFF7F4ED),
         )
     ) {
-        SharedDisplayScreen(state = state, compact = false)
+        SharedDisplayScreen(state = state, compact = false, onVideoFinished = onVideoFinished)
     }
 }

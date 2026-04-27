@@ -11,9 +11,13 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import java.util.UUID
 
-fun Application.installBuzzRoute(engine: GameEngine) {
+fun Application.installBuzzRoute(engine: GameEngine, buzzAllowed: () -> Boolean) {
     routing {
         post("/buzz") {
+            if (!buzzAllowed()) {
+                return@post call.respond(HttpStatusCode.ServiceUnavailable, "Game is paused")
+            }
+
             val playerIdValue = call.receiveParameters()["playerId"]
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing playerId")
 

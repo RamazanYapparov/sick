@@ -88,4 +88,19 @@ class GameTimerTest {
 
         assertEquals(GamePhase.ChoosingQuestion, engine.phase)
     }
+
+    @Test
+    fun `paused timer does not advance elapsed question state`() = runTest {
+        val engine = engineAtShowingQuestion()
+        val timer = GameTimer(engine, this)
+        engine.process(PauseTimer)
+        val before = engine.state.timerRemaining
+
+        timer.start(1)
+        advanceTimeBy(1_001L)
+
+        assertEquals(before, engine.state.timerRemaining)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+        assertTrue(engine.state.isTimerPaused)
+    }
 }

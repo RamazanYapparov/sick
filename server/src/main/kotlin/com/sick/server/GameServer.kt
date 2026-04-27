@@ -10,6 +10,7 @@ import io.ktor.server.engine.embeddedServer
 class GameServer(
     private val engine: GameEngine,
     val port: Int = 8080,
+    private val buzzAllowed: () -> Boolean = { true },
 ) {
     private var server: ApplicationEngine? = null
 
@@ -18,9 +19,9 @@ class GameServer(
             return
         }
 
-        server = embeddedServer(CIO, port = port) {
+        server = embeddedServer(CIO, port = port, host = "0.0.0.0") {
             installPageRoute(engine)
-            installBuzzRoute(engine)
+            installBuzzRoute(engine, buzzAllowed)
         }.start(wait = false)
     }
 

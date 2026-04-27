@@ -44,6 +44,7 @@ class DesktopSessionController(
 
     private var loadedPack: Package? = null
     private var loadedPackPath: String? = null
+    private var extractedBasePath: Path? = null
 
     private var engine: GameEngine = createEngine(emptyPack())
     private var timer: GameTimer = GameTimer(engine, scope)
@@ -150,10 +151,11 @@ class DesktopSessionController(
                 destination = System.getProperty("java.io.tmpdir"),
             ).extract()
             val rawPack = reader.read(extracted)
-            sanitizePack(rawPack)
-        }.onSuccess { pack ->
+            Pair(extracted, sanitizePack(rawPack))
+        }.onSuccess { (extracted, pack) ->
             loadedPack = pack
             loadedPackPath = path.toString()
+            extractedBasePath = extracted
             replaceSession(pack)
             setInfo("Loaded pack: ${pack.name}")
         }.onFailure { error ->
@@ -187,6 +189,7 @@ class DesktopSessionController(
         uiState = uiState.copy(
             packName = if (state.pack.rounds.isEmpty()) "No pack loaded" else state.pack.name,
             loadedPackPath = loadedPackPath,
+            extractedBasePath = extractedBasePath,
             phase = engine.phase,
             players = state.players,
             activePlayerId = state.activePlayerId,
@@ -259,6 +262,7 @@ class DesktopSessionController(
 data class DesktopUiState(
     val packName: String,
     val loadedPackPath: String?,
+    val extractedBasePath: Path?,
     val phase: GamePhase,
     val players: List<Player>,
     val activePlayerId: UUID?,
@@ -280,6 +284,7 @@ data class DesktopUiState(
         fun initial(port: Int) = DesktopUiState(
             packName = "No pack loaded",
             loadedPackPath = null,
+            extractedBasePath = null,
             phase = GamePhase.Lobby,
             players = emptyList(),
             activePlayerId = null,
@@ -311,12 +316,26 @@ data class BoardQuestionState(
     val played: Boolean,
 )
 
-fun Question<*>.displayLines(): List<String> =
+sealed interface QuestionDisplayItem {
+    data class Text(val text: String) : QuestionDisplayItem
+    data class LocalImage(val absolutePath: String) : QuestionDisplayItem
+    data class RemoteImage(val url: java.net.URL) : QuestionDisplayItem
+}
+
+fun Question<*>.displayContents(basePath: java.nio.file.Path?): List<QuestionDisplayItem> =
     contents.map { content ->
         when (content) {
-            is Content.Text -> content.text
-            is Content.Media.FileRef -> "${content.type.name}: ${content.ref}"
-            is Content.Media.FileUrl -> "${content.type.name}: ${content.url}"
+            is Content.Text -> QuestionDisplayItem.Text(content.text)
+            is Content.Media.FileRef -> when (content.type) {
+                Content.Type.Image -> QuestionDisplayItem.LocalImage(
+                    basePath?.resolve("Images")?.resolve(content.ref)?.toString() ?: content.ref
+                )
+                else -> TODO("Unsupported media type: ${content.type}")
+            }
+            is Content.Media.FileUrl -> when (content.type) {
+                Content.Type.Image -> QuestionDisplayItem.RemoteImage(content.url)
+                else -> TODO("Unsupported media type: ${content.type}")
+            }
         }
     }
 

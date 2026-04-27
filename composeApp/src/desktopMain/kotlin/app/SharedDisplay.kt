@@ -1,5 +1,6 @@
 package app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,9 +16,12 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -125,8 +129,44 @@ private fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySi
 
             Divider(color = Color(0x335F7D8D))
 
-            question.displayLines().forEach { line ->
-                Text(line, fontSize = bodySize, color = Color.White)
+            question.displayContents(state.extractedBasePath).forEach { item ->
+                when (item) {
+                    is QuestionDisplayItem.Text ->
+                        Text(item.text, fontSize = bodySize, color = Color.White)
+                    is QuestionDisplayItem.LocalImage -> {
+                        val bitmap = remember(item.absolutePath) {
+                            runCatching {
+                                java.io.File(item.absolutePath).inputStream().buffered()
+                                    .use(::loadImageBitmap)
+                            }.getOrNull()
+                        }
+                        if (bitmap != null)
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentScale = ContentScale.Fit,
+                            )
+                        else
+                            Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
+                    }
+                    is QuestionDisplayItem.RemoteImage -> {
+                        val bitmap = remember(item.url) {
+                            runCatching {
+                                item.url.openStream().buffered().use(::loadImageBitmap)
+                            }.getOrNull()
+                        }
+                        if (bitmap != null)
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentScale = ContentScale.Fit,
+                            )
+                        else
+                            Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
+                    }
+                }
             }
         }
     }

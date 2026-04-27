@@ -29,6 +29,7 @@ class SiqExtractor(private val source: String, private val destination: String) 
 
     fun extract(): Path {
         tempDir = Files.createTempDirectory("tmp")
+        println("Created temp directory $tempDir")
         ZipFile(source).use { zf ->
             zf.entries().asSequence().forEach { entry ->
                 if (entry.hasDirectory) {

@@ -128,17 +128,17 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
     </div>
   </main>
   <script>
-    var playerId = null;
+    let playerId = null;
 
     document.getElementById('name-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') doJoin();
     });
 
     function doJoin() {
-      var name = document.getElementById('name-input').value.trim();
+      const name = document.getElementById('name-input').value.trim();
       if (!name) return;
-      var btn = document.getElementById('join-btn');
-      var err = document.getElementById('join-error');
+      const btn = document.getElementById('join-btn');
+      const err = document.getElementById('join-error');
       btn.disabled = true;
       err.textContent = '';
 
@@ -166,15 +166,20 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
     }
 
     function doBuzz() {
+      document.getElementById('status').textContent = '';
       if (!playerId) return;
+      const buzzBtn = document.getElementById('buzz');
+      buzzBtn.disabled = true;
       fetch('/buzz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'playerId=' + encodeURIComponent(playerId)
       }).then(function(response) {
         document.getElementById('status').textContent = response.ok ? 'Buzzed!' : 'Too slow!';
+        buzzBtn.disabled = false;
       }).catch(function() {
         document.getElementById('status').textContent = 'Connection lost.';
+        buzzBtn.disabled = false;
       });
     }
   </script>

@@ -17,6 +17,10 @@ import androidx.compose.material.Card
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,26 +63,43 @@ internal fun PlayerEditorRow(
     onScoreChange: (String) -> Unit,
     onAdjustScore: () -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
     Card(backgroundColor = Color.White, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = scoreDelta,
-                    onValueChange = onScoreChange,
-                    label = { Text("Score delta") },
-                    modifier = Modifier.width(140.dp),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
-                Button(onClick = onAdjustScore) {
-                    Text("Apply")
+            if (!expanded) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+                    Button(onClick = { expanded = true }) {
+                        Text("Edit")
+                    }
                 }
-                Text("Use negative values to subtract.")
+            } else {
+                Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = scoreDelta,
+                        onValueChange = onScoreChange,
+                        label = { Text("Score delta") },
+                        modifier = Modifier.width(140.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                    Button(onClick = {
+                        onAdjustScore()
+                        expanded = false
+                    }) {
+                        Text("Apply")
+                    }
+                    Text("Use negative values to subtract.")
+                }
             }
         }
     }

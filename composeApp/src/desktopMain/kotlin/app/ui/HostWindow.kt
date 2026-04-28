@@ -23,17 +23,13 @@ import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,14 +38,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sick.state.GamePhase
 
 @Composable
 internal fun HostWindowContent(controller: DesktopSessionController, state: DesktopUiState) {
-    var newPlayerName by remember { mutableStateOf("") }
-    val renameDrafts = remember { mutableStateMapOf<String, String>() }
     val scoreDrafts = remember { mutableStateMapOf<String, String>() }
-    val lobbyEditable = state.phase == GamePhase.Lobby && state.hasPack
 
     Surface(color = MaterialTheme.colors.background) {
         Row(
@@ -91,49 +83,15 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 }
 
                 SectionCard("Players") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        OutlinedTextField(
-                            value = newPlayerName,
-                            onValueChange = { newPlayerName = it },
-                            label = { Text("New player") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            enabled = lobbyEditable,
-                        )
-                        Button(
-                            onClick = {
-                                controller.addPlayer(newPlayerName)
-                                newPlayerName = ""
-                            },
-                            enabled = lobbyEditable,
-                        ) {
-                            Text("Add")
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
                     if (state.players.isEmpty()) {
-                        Text("No players yet.")
+                        Text("No players yet. Players join via the buzzer URL.")
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             state.players.forEach { player ->
-                                val renameKey = player.id.toString()
                                 val scoreKey = player.id.toString()
-                                val renameValue = renameDrafts.getOrPut(renameKey) { player.name }
                                 val scoreValue = scoreDrafts.getOrPut(scoreKey) { "100" }
-
                                 PlayerEditorRow(
                                     player = player,
-                                    renameValue = renameValue,
-                                    onRenameChange = { renameDrafts[renameKey] = it },
-                                    onRenameCommit = { controller.renamePlayer(player.id, renameDrafts[renameKey].orEmpty()) },
-                                    onRemove = { controller.removePlayer(player.id) },
-                                    renameEnabled = lobbyEditable,
                                     scoreDelta = scoreValue,
                                     onScoreChange = { scoreDrafts[scoreKey] = it },
                                     onAdjustScore = {

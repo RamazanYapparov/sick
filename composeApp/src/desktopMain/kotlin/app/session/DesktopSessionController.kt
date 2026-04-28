@@ -23,6 +23,7 @@ import com.sick.event.SkipQuestion
 import com.sick.event.StartGame
 import com.sick.model.Package
 import com.sick.server.GameServer
+import com.sick.state.GamePhase
 import kotlinx.coroutines.CoroutineScope
 import java.nio.file.Path
 import java.util.UUID
@@ -118,8 +119,18 @@ class DesktopSessionController(
                 timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
                 clearMessages()
                 publishState()
+                autoSelectIfSingleCandidate()
             },
         )
+    }
+
+    private fun autoSelectIfSingleCandidate() {
+        if (engine.phase == GamePhase.ChoosingPlayer) {
+            val candidates = uiState.lowestScoreCandidates
+            if (candidates.size == 1) {
+                selectActivePlayer(candidates.single().id)
+            }
+        }
     }
 
     fun mediaFinished() {

@@ -98,4 +98,45 @@ class PlayerOpsTest {
         assertTrue(result.isRight())
         assertEquals("Alice", result.getOrNull()!!.findPlayer(alice.id)!!.name)
     }
+
+    @Test
+    fun `lowestScoreCandidates returns empty when no players`() {
+        assertEquals(emptyList(), state.lowestScoreCandidates())
+    }
+
+    @Test
+    fun `lowestScoreCandidates returns all players when all scores are zero`() {
+        val s = state.addPlayer("Alice").getOrNull()!!.addPlayer("Bob").getOrNull()!!
+        assertEquals(2, s.lowestScoreCandidates().size)
+    }
+
+    @Test
+    fun `lowestScoreCandidates returns single player with unique lowest score`() {
+        val s = state.addPlayer("Alice").getOrNull()!!.addPlayer("Bob").getOrNull()!!
+        val alice = s.players.first { it.name == "Alice" }
+        val withScores = s.copy(players = s.players.map {
+            if (it.id == alice.id) it.copy(score = -100) else it.copy(score = 200)
+        })
+        val candidates = withScores.lowestScoreCandidates()
+        assertEquals(1, candidates.size)
+        assertEquals("Alice", candidates.single().name)
+    }
+
+    @Test
+    fun `lowestScoreCandidates returns all tied players when multiple share minimum score`() {
+        val s = state.addPlayer("Alice").getOrNull()!!
+            .addPlayer("Bob").getOrNull()!!
+            .addPlayer("Carol").getOrNull()!!
+        val withScores = s.copy(players = s.players.map {
+            when (it.name) {
+                "Alice" -> it.copy(score = 0)
+                "Bob"   -> it.copy(score = 0)
+                else    -> it.copy(score = 500)
+            }
+        })
+        val candidates = withScores.lowestScoreCandidates()
+        assertEquals(2, candidates.size)
+        assertTrue(candidates.any { it.name == "Alice" })
+        assertTrue(candidates.any { it.name == "Bob" })
+    }
 }

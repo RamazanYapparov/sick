@@ -35,3 +35,8 @@ fun GameState.updatePlayerScore(playerId: UUID, transform: (Player) -> Player): 
     ensure(players.any { it.id == playerId }) { PlayerError.NotFound(playerId) }
     copy(players = players.map { if (it.id == playerId) transform(it) else it })
 }
+
+fun GameState.lowestScoreCandidates(): List<Player> {
+    val min = players.minOfOrNull { it.score } ?: return emptyList()
+    return players.filter { it.score == min }
+}

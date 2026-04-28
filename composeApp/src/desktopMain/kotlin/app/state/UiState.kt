@@ -4,6 +4,7 @@ import com.sick.engine.GameEngine
 import com.sick.model.Player
 import com.sick.model.Question
 import com.sick.model.Round
+import com.sick.service.lowestScoreCandidates
 import com.sick.state.GamePhase
 import java.nio.file.Path
 import java.util.UUID
@@ -22,6 +23,7 @@ data class DesktopUiState(
     val currentQuestion: Question<*>?,
     val currentThemeName: String?,
     val boardThemes: List<BoardThemeState>,
+    val lowestScoreCandidates: List<Player>,
     val timerRemaining: Int,
     val isTimerPaused: Boolean,
     val mediaActive: Boolean,
@@ -47,6 +49,7 @@ data class DesktopUiState(
             currentQuestion = null,
             currentThemeName = null,
             boardThemes = emptyList(),
+            lowestScoreCandidates = emptyList(),
             timerRemaining = 0,
             isTimerPaused = false,
             mediaActive = false,
@@ -107,6 +110,7 @@ fun DesktopUiState.withEngineSnapshot(
                 },
             )
         },
+        lowestScoreCandidates = state.lowestScoreCandidates(),
         timerRemaining = state.timerRemaining,
         isTimerPaused = state.isTimerPaused,
         serverUrl = serverUrl,

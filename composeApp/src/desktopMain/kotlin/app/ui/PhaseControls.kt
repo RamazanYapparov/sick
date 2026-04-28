@@ -29,10 +29,10 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                 }
             }
             GamePhase.ChoosingPlayer -> {
-                Text("Choose who controls the board.")
+                Text("Choose who controls the board — showing lowest score players.")
                 Spacer(Modifier.height(8.dp))
                 PlayerChipRow(
-                    players = state.players,
+                    players = state.lowestScoreCandidates,
                     activePlayerId = state.activePlayerId,
                     onClick = controller::selectActivePlayer,
                 )

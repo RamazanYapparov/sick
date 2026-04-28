@@ -20,6 +20,7 @@ import com.sick.event.QuestionSelected
 import com.sick.event.ResumeTimer
 import com.sick.event.SelectActivePlayer
 import com.sick.event.SkipQuestion
+import com.sick.event.SkipRound
 import com.sick.event.StartGame
 import com.sick.model.Package
 import com.sick.server.GameServer
@@ -99,6 +100,8 @@ class DesktopSessionController(
     fun markAnswerWrong() = process(HostRejected)
 
     fun skipQuestion() = process(SkipQuestion)
+
+    fun skipRound() = process(SkipRound)
 
     fun showAnswer() = process(AnswerShown)
 

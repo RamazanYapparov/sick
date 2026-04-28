@@ -32,4 +32,5 @@ data class AdjustPlayerScore(val playerId: UUID, val delta: Int) : GameEvent
 data object AnswerShown : GameEvent
 
 // Round/game flow
+data object SkipRound : GameEvent
 data object NextRound : GameEvent

@@ -53,8 +53,8 @@ class GameEngine(pack: Package) {
                 StartGame::class,
                 AdjustPlayerScore::class,
             )
-            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, AdjustPlayerScore::class)
-            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, AdjustPlayerScore::class)
+            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, SkipRound::class, AdjustPlayerScore::class)
+            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, SkipRound::class, AdjustPlayerScore::class)
             GamePhase.RevealingQuestion -> setOf(QuestionRevealed::class, SkipQuestion::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
                 PlayerBuzzed::class,
@@ -166,6 +166,20 @@ class GameEngine(pack: Package) {
                 isTimerPaused = false,
             )
 
+            is SkipRound -> {
+                val allRoundIds = _state.currentRound
+                    ?.themes?.flatMap { it.questions }?.map { it.id }?.toSet()
+                    ?: emptySet()
+                _state.copy(
+                    playedQuestionIds = _state.playedQuestionIds + allRoundIds,
+                    currentQuestion = null,
+                    answeringPlayerId = null,
+                    timerRemaining = 0,
+                    isTimerPaused = false,
+                    failedBuzzPlayerIds = emptySet(),
+                )
+            }
+
             is AdjustPlayerScore -> _state.updatePlayerScore(event.playerId) { player ->
                 player.copy(score = player.score + event.delta)
             }.mapLeft { GameError.PlayerError(it) }.bind()
@@ -186,6 +200,7 @@ class GameEngine(pack: Package) {
         is HostAccepted -> GamePhase.ShowingAnswer
         is HostRejected -> if (_state.players.all { it.id in _state.failedBuzzPlayerIds })
             GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        is SkipRound -> GamePhase.RoundEnd
         is AnswerShown -> when {
             _state.isGameOver -> GamePhase.GameOver
             _state.isRoundComplete -> GamePhase.RoundEnd

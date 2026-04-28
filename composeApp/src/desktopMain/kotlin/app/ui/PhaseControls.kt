@@ -46,6 +46,10 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     enabled = true,
                     onQuestionClick = controller::selectQuestion,
                 )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = controller::skipRound) {
+                    Text("Skip Round")
+                }
             }
             GamePhase.RevealingQuestion -> {
                 Text("Revealing question…")

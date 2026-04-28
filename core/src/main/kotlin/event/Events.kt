@@ -27,5 +27,8 @@ data object HostAccepted : GameEvent
 data object HostRejected : GameEvent
 data class AdjustPlayerScore(val playerId: UUID, val delta: Int) : GameEvent
 
+// Answer reveal
+data object AnswerShown : GameEvent
+
 // Round/game flow
 data object NextRound : GameEvent

@@ -70,6 +70,7 @@ class GameEngine(pack: Package) {
                 SkipQuestion::class,
                 AdjustPlayerScore::class,
             )
+            GamePhase.ShowingAnswer -> setOf(AnswerShown::class, AdjustPlayerScore::class)
             GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class)
             GamePhase.GameOver -> setOf(AdjustPlayerScore::class)
         }
@@ -120,11 +121,10 @@ class GameEngine(pack: Package) {
             is TimerExpired -> if (_state.isTimerPaused) {
                 _state
             } else {
-                _state.copy(answeringPlayerId = null, currentQuestion = null, isTimerPaused = false)
+                _state.copy(answeringPlayerId = null, isTimerPaused = false)
             }
             is SkipQuestion -> _state.copy(
                 answeringPlayerId = null,
-                currentQuestion = null,
                 timerRemaining = 0,
                 isTimerPaused = false,
                 failedBuzzPlayerIds = emptySet(),
@@ -139,7 +139,6 @@ class GameEngine(pack: Package) {
                     .copy(
                         activePlayerId = playerId,
                         answeringPlayerId = null,
-                        currentQuestion = null,
                         isTimerPaused = false,
                     )
             }
@@ -156,6 +155,14 @@ class GameEngine(pack: Package) {
                     )
             }
 
+            is AnswerShown -> _state.copy(
+                currentQuestion = null,
+                answeringPlayerId = null,
+                failedBuzzPlayerIds = emptySet(),
+                timerRemaining = 0,
+                isTimerPaused = false,
+            )
+
             is AdjustPlayerScore -> _state.updatePlayerScore(event.playerId) { player ->
                 player.copy(score = player.score + event.delta)
             }.mapLeft { GameError.PlayerError(it) }.bind()
@@ -170,23 +177,16 @@ class GameEngine(pack: Package) {
         is QuestionSelected -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
         is PauseTimer, is ResumeTimer -> _phase
-        is TimerExpired -> when {
-            _state.isTimerPaused -> GamePhase.ShowingQuestion
+        is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer
+        is SkipQuestion -> GamePhase.ShowingAnswer
+        is HostAccepted -> GamePhase.ShowingAnswer
+        is HostRejected -> if (_state.players.all { it.id in _state.failedBuzzPlayerIds })
+            GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        is AnswerShown -> when {
             _state.isGameOver -> GamePhase.GameOver
             _state.isRoundComplete -> GamePhase.RoundEnd
             else -> GamePhase.ChoosingQuestion
         }
-        is SkipQuestion -> when {
-            _state.isGameOver -> GamePhase.GameOver
-            _state.isRoundComplete -> GamePhase.RoundEnd
-            else -> GamePhase.ChoosingQuestion
-        }
-        is HostAccepted -> when {
-            _state.isGameOver -> GamePhase.GameOver
-            _state.isRoundComplete -> GamePhase.RoundEnd
-            else -> GamePhase.ChoosingQuestion
-        }
-        is HostRejected -> GamePhase.ShowingQuestion
         is NextRound -> if (_state.isGameOver) GamePhase.GameOver else GamePhase.ChoosingPlayer
         is PlayerJoined, is PlayerLeft, is PlayerRenamed -> _phase
         is TimerTick, is AdjustPlayerScore -> _phase

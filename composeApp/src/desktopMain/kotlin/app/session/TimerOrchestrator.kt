@@ -5,41 +5,62 @@ import com.sick.engine.GameTimer
 import com.sick.model.Content
 import com.sick.model.Question
 import com.sick.state.GamePhase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class TimerOrchestrator(
     private val timer: GameTimer,
     private val engine: GameEngine,
+    private val scope: CoroutineScope,
+    private val onAnswerShown: () -> Unit,
 ) {
     companion object {
         private const val TIMER_OFFSET_SECONDS = 3
+        private const val ANSWER_REVEAL_MS = 4_000L
     }
 
     private var mediaTimerPending = false
+    private var revealJob: Job? = null
 
     fun onPhaseChange(previous: GamePhase, current: GamePhase, wasPaused: Boolean) {
-        if (current != GamePhase.ShowingQuestion) {
-            mediaTimerPending = false
-            timer.stop()
-            return
-        }
+        revealJob?.cancel()
+        revealJob = null
 
-        val state = engine.state
-        if (state.isTimerPaused) {
-            timer.stop()
-            return
-        }
-
-        if (wasPaused && !mediaTimerPending) {
-            if (state.timerRemaining > 0) timer.start(state.timerRemaining)
-            return
-        }
-
-        if (previous != GamePhase.ShowingQuestion && state.timerRemaining > 0) {
-            if (state.currentQuestion?.hasMedia() == true) {
-                mediaTimerPending = true
-            } else {
+        when (current) {
+            GamePhase.ShowingAnswer -> {
                 mediaTimerPending = false
-                timer.start(state.timerRemaining, offsetSeconds = TIMER_OFFSET_SECONDS)
+                timer.stop()
+                revealJob = scope.launch {
+                    delay(ANSWER_REVEAL_MS)
+                    if (engine.phase == GamePhase.ShowingAnswer) onAnswerShown()
+                }
+            }
+            GamePhase.ShowingQuestion -> {
+                val state = engine.state
+                if (state.isTimerPaused) {
+                    timer.stop()
+                    return
+                }
+
+                if (wasPaused && !mediaTimerPending) {
+                    if (state.timerRemaining > 0) timer.start(state.timerRemaining)
+                    return
+                }
+
+                if (previous != GamePhase.ShowingQuestion && state.timerRemaining > 0) {
+                    if (state.currentQuestion?.hasMedia() == true) {
+                        mediaTimerPending = true
+                    } else {
+                        mediaTimerPending = false
+                        timer.start(state.timerRemaining, offsetSeconds = TIMER_OFFSET_SECONDS)
+                    }
+                }
+            }
+            else -> {
+                mediaTimerPending = false
+                timer.stop()
             }
         }
     }
@@ -54,6 +75,8 @@ class TimerOrchestrator(
     }
 
     fun stop() {
+        revealJob?.cancel()
+        revealJob = null
         mediaTimerPending = false
         timer.stop()
     }

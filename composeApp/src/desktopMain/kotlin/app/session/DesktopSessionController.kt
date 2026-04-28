@@ -8,6 +8,7 @@ import app.state.withEngineSnapshot
 import com.sick.engine.GameEngine
 import com.sick.engine.GameTimer
 import com.sick.event.AdjustPlayerScore
+import com.sick.event.AnswerShown
 import com.sick.event.GameEvent
 import com.sick.event.HostAccepted
 import com.sick.event.HostRejected
@@ -41,7 +42,7 @@ class DesktopSessionController(
     private var engine: GameEngine = createEngine(emptyPack())
     private var timer: GameTimer = GameTimer(engine, scope)
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine)
+    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer)
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
@@ -104,6 +105,8 @@ class DesktopSessionController(
 
     fun skipQuestion() = process(SkipQuestion)
 
+    fun showAnswer() = process(AnswerShown)
+
     fun nextRound() = process(NextRound)
 
     fun adjustScore(playerId: UUID, delta: Int) = process(AdjustPlayerScore(playerId, delta))
@@ -147,7 +150,7 @@ class DesktopSessionController(
         engine = createEngine(pack)
         timer = GameTimer(engine, scope)
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-        timerOrchestrator = TimerOrchestrator(timer, engine)
+        timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer)
         bindEngine(engine)
         server.start()
         publishState()

@@ -97,6 +97,13 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     }
                 }
             }
+            GamePhase.ShowingAnswer -> {
+                Text("Answer revealed.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = controller::showAnswer) {
+                    Text("Continue")
+                }
+            }
             GamePhase.RoundEnd -> {
                 Text("Round complete.")
                 Spacer(Modifier.height(8.dp))

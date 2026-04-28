@@ -4,7 +4,9 @@ import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sick.model.Answer
+import com.sick.state.GamePhase
 
 @Composable
 internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMediaFinished: () -> Unit = {}) {
@@ -65,10 +69,13 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                 Scoreboard(state.players, state.activePlayerId, state.answeringPlayerId, compact)
             }
 
-            if (state.currentQuestion == null) {
-                BoardOverview(state, compact)
-            } else {
-                CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
+            when {
+                state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
+                    AnswerPanel(state.currentQuestion!!.answer, compact, bodySize)
+                state.currentQuestion != null ->
+                    CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
+                else ->
+                    BoardOverview(state, compact)
             }
         }
     }
@@ -94,6 +101,56 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
                 enabled = false,
                 onQuestionClick = {},
             )
+        }
+    }
+}
+
+@Composable
+private fun AnswerPanel(answer: Answer, compact: Boolean, bodySize: TextUnit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Palette.DarkSurface,
+        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+        ) {
+            Text(
+                "Answer",
+                fontSize = if (compact) 16.sp else 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Palette.AccentGold,
+            )
+            Divider(color = Color(0x335F7D8D))
+            when (answer) {
+                is Answer.Simple -> {
+                    answer.right.forEach { right ->
+                        Text(right, fontSize = bodySize, color = Color(0xFF5CCD8F), fontWeight = FontWeight.Bold)
+                    }
+                    if (answer.wrong.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text("Also accepted:", fontSize = bodySize, color = Color.White)
+                        answer.wrong.forEach { wrong ->
+                            Text(wrong, fontSize = bodySize, color = Color(0xFFAAAAAA))
+                        }
+                    }
+                }
+                is Answer.Select -> {
+                    answer.options.forEach { option ->
+                        val bg = if (option.correct) Color(0xFF1E4D2B) else Color(0x225F7D8D)
+                        val textColor = if (option.correct) Color(0xFF5CCD8F) else Color(0xFFAAAAAA)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(bg, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text("${option.name}: ${option.answer}", fontSize = bodySize, color = textColor, fontWeight = if (option.correct) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
         }
     }
 }

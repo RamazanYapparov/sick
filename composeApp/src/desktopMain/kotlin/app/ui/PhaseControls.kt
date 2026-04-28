@@ -68,6 +68,11 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                             Text("Pause")
                         }
                     }
+                    if (state.mediaActive) {
+                        Button(onClick = controller::skipMedia) {
+                            Text("Skip Media")
+                        }
+                    }
                     Button(onClick = controller::skipQuestion) {
                         Text("Skip Question")
                     }

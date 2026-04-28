@@ -24,6 +24,7 @@ class TimerOrchestrator(
     }
 
     private var mediaTimerPending = false
+    val isMediaPending: Boolean get() = mediaTimerPending
     private var revealJob: Job? = null
 
     fun onPhaseChange(previous: GamePhase, current: GamePhase, wasPaused: Boolean) {

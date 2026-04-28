@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,12 +53,18 @@ private object JavaFxInit {
 }
 
 @Composable
-fun VideoPlayer(uri: String, modifier: Modifier = Modifier, onFinished: () -> Unit = {}) {
+fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, onFinished: () -> Unit = {}) {
     val jfxPanel = remember { JFXPanel() }
     val playerRef = remember { arrayOfNulls<MediaPlayer>(1) }
     var progress by remember { mutableStateOf(0f) }
     var currentMs by remember { mutableStateOf(0.0) }
     var totalMs by remember { mutableStateOf(0.0) }
+
+    LaunchedEffect(stopSignal) {
+        if (stopSignal > 0) {
+            JfxPlatform.runLater { playerRef[0]?.stop() }
+        }
+    }
 
     DisposableEffect(uri) {
         JavaFxInit.ensureStarted()

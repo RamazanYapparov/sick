@@ -45,6 +45,8 @@ class DesktopSessionController(
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
     private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
 
+    private var mediaStopSignal = 0
+
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
 
@@ -129,7 +131,16 @@ class DesktopSessionController(
         )
     }
 
-    fun mediaFinished() = timerOrchestrator.onMediaFinished()
+    fun mediaFinished() {
+        timerOrchestrator.onMediaFinished()
+        publishState()
+    }
+
+    fun skipMedia() {
+        mediaStopSignal++
+        timerOrchestrator.onMediaFinished()
+        publishState()
+    }
 
     private fun loadPack(path: Path) {
         packLoader.load(path)
@@ -171,6 +182,9 @@ class DesktopSessionController(
             loadedPackPath = loadedPackPath,
             extractedBasePath = extractedBasePath,
             serverUrl = "http://${resolveLanIp()}:$port",
+        ).copy(
+            mediaActive = timerOrchestrator.isMediaPending,
+            mediaStopSignal = mediaStopSignal,
         )
     }
 

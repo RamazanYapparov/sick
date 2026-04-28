@@ -15,9 +15,6 @@ import com.sick.event.HostRejected
 import com.sick.event.NextRound
 import com.sick.event.PauseTimer
 import com.sick.event.PlayerBuzzed
-import com.sick.event.PlayerJoined
-import com.sick.event.PlayerLeft
-import com.sick.event.PlayerRenamed
 import com.sick.event.QuestionRevealed
 import com.sick.event.QuestionSelected
 import com.sick.event.ResumeTimer
@@ -81,12 +78,6 @@ class DesktopSessionController(
             else "Empty game created. Load a pack to start playing."
         )
     }
-
-    fun addPlayer(name: String) = process(PlayerJoined(name.trim()))
-
-    fun removePlayer(playerId: UUID) = process(PlayerLeft(playerId))
-
-    fun renamePlayer(playerId: UUID, newName: String) = process(PlayerRenamed(playerId, newName.trim()))
 
     fun startGame() = process(StartGame)
 

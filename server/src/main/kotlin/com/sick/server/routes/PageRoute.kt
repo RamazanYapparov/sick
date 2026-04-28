@@ -1,7 +1,5 @@
 package com.sick.server.routes
 
-import com.sick.engine.GameEngine
-import com.sick.model.Player
 import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -9,23 +7,18 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 
-fun Application.installPageRoute(engine: GameEngine) {
+fun Application.installPageRoute() {
     routing {
         get("/") {
             call.respondText(
-                text = renderBuzzerPage(engine.state.players),
+                text = renderBuzzerPage(),
                 contentType = ContentType.Text.Html,
             )
         }
     }
 }
 
-private fun renderBuzzerPage(players: List<Player>): String {
-    val playerButtons = players.joinToString("\n") { player ->
-        """    <button class="player-btn" onclick="selectPlayer(event, '${player.id}', '${escapeJs(player.name)}')">${escapeHtml(player.name)}</button>"""
-    }
-
-    return """<!DOCTYPE html>
+private fun renderBuzzerPage(): String = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -61,12 +54,23 @@ private fun renderBuzzerPage(players: List<Player>): String {
     p {
       color: #bfd1eb;
     }
-    #players {
-      display: grid;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
+    #name-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.75rem 1rem;
+      border: 0;
+      border-radius: 999px;
+      font-size: 1.1rem;
+      background: #253754;
+      color: #f3f6fb;
+      text-align: center;
+      outline: none;
+      margin-bottom: 0.75rem;
     }
-    .player-btn,
+    #name-input:focus {
+      box-shadow: 0 0 0 3px rgba(94, 200, 248, 0.25);
+    }
+    #join-btn,
     #buzz {
       width: 100%;
       border: 0;
@@ -75,75 +79,97 @@ private fun renderBuzzerPage(players: List<Player>): String {
       font-size: 1.1rem;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+      transition: transform 120ms ease, opacity 120ms ease;
     }
-    .player-btn {
-      background: #253754;
-      color: #f3f6fb;
-    }
-    .player-btn.selected {
+    #join-btn {
       background: #5ec8f8;
       color: #08111c;
-      box-shadow: 0 0 0 3px rgba(94, 200, 248, 0.25);
+    }
+    #join-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
     #buzz {
-      display: none;
       margin-top: 1.5rem;
       background: linear-gradient(135deg, #ff795e 0%, #ff3d54 100%);
       color: white;
     }
-    .player-btn:active,
+    #join-btn:active,
     #buzz:active {
       transform: scale(0.98);
+    }
+    #join-error {
+      color: #ff6b6b;
+      min-height: 1.5rem;
+      margin-top: 0.5rem;
     }
     #status {
       min-height: 1.5rem;
       margin-top: 1rem;
     }
-    .empty {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      border-radius: 1rem;
-      background: rgba(255, 255, 255, 0.06);
+    #buzz-section {
+      display: none;
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>Who are you?</h1>
-    <p>Select your name, then keep one thumb ready.</p>
-    <div id="players">
-$playerButtons
+    <h1>SICK Buzzer</h1>
+    <div id="join-section">
+      <p>Enter your name to join the game.</p>
+      <input id="name-input" type="text" placeholder="Your name" maxlength="30" autocomplete="off" />
+      <button id="join-btn" onclick="doJoin()">JOIN</button>
+      <p id="join-error"></p>
     </div>
-    <div class="empty" id="empty-state"${if (players.isEmpty()) "" else " hidden"}>
-      No players yet. Add players in the desktop app, then refresh this page.
+    <div id="buzz-section">
+      <p id="greeting"></p>
+      <button id="buzz" onclick="doBuzz()">BUZZ!</button>
+      <p id="status"></p>
     </div>
-    <button id="buzz" onclick="doBuzz()">BUZZ!</button>
-    <p id="status"></p>
   </main>
   <script>
-    let playerId = null;
+    var playerId = null;
 
-    function selectPlayer(evt, id, name) {
-      playerId = id;
-      document.querySelectorAll('.player-btn').forEach(function(button) {
-        button.classList.remove('selected');
+    document.getElementById('name-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doJoin();
+    });
+
+    function doJoin() {
+      var name = document.getElementById('name-input').value.trim();
+      if (!name) return;
+      var btn = document.getElementById('join-btn');
+      var err = document.getElementById('join-error');
+      btn.disabled = true;
+      err.textContent = '';
+
+      fetch('/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'name=' + encodeURIComponent(name)
+      }).then(function(response) {
+        if (response.ok) {
+          return response.json().then(function(data) {
+            playerId = data.playerId;
+            document.getElementById('join-section').style.display = 'none';
+            document.getElementById('buzz-section').style.display = 'block';
+            document.getElementById('greeting').textContent = 'Hello, ' + name + '!';
+          });
+        }
+        return response.text().then(function(msg) {
+          err.textContent = msg;
+          btn.disabled = false;
+        });
+      }).catch(function() {
+        err.textContent = 'Connection lost.';
+        btn.disabled = false;
       });
-      evt.currentTarget.classList.add('selected');
-      document.getElementById('buzz').style.display = 'block';
-      document.getElementById('status').textContent = 'Ready, ' + name + '!';
     }
 
     function doBuzz() {
-      if (!playerId) {
-        return;
-      }
-
+      if (!playerId) return;
       fetch('/buzz', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'playerId=' + encodeURIComponent(playerId)
       }).then(function(response) {
         document.getElementById('status').textContent = response.ok ? 'Buzzed!' : 'Too slow!';
@@ -154,36 +180,3 @@ $playerButtons
   </script>
 </body>
 </html>"""
-}
-
-private fun escapeHtml(value: String): String =
-    buildString(value.length) {
-        value.forEach { char ->
-            append(
-                when (char) {
-                    '&' -> "&amp;"
-                    '<' -> "&lt;"
-                    '>' -> "&gt;"
-                    '"' -> "&quot;"
-                    '\'' -> "&#39;"
-                    else -> char
-                }
-            )
-        }
-    }
-
-private fun escapeJs(value: String): String =
-    buildString(value.length) {
-        value.forEach { char ->
-            append(
-                when (char) {
-                    '\\' -> "\\\\"
-                    '\'' -> "\\'"
-                    '\n' -> "\\n"
-                    '\r' -> "\\r"
-                    '\t' -> "\\t"
-                    else -> char
-                }
-            )
-        }
-    }

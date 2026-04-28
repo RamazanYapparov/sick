@@ -72,6 +72,8 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
                     AnswerPanel(state.currentQuestion!!.answer, compact, bodySize)
+                state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
+                    RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
                     CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
                 else ->
@@ -101,6 +103,30 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
                 enabled = false,
                 onQuestionClick = {},
             )
+        }
+    }
+}
+
+@Composable
+private fun RevealingQuestionPlaceholder(state: DesktopUiState, compact: Boolean, bodySize: TextUnit) {
+    val question = state.currentQuestion ?: return
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Palette.DarkSurface,
+        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                state.currentThemeName ?: "Question",
+                fontSize = if (compact) 16.sp else 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Palette.AccentGold,
+            )
+            Text("${question.price} points", fontSize = bodySize, color = Color.White)
         }
     }
 }

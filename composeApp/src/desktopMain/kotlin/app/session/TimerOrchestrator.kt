@@ -15,10 +15,12 @@ class TimerOrchestrator(
     private val engine: GameEngine,
     private val scope: CoroutineScope,
     private val onAnswerShown: () -> Unit,
+    private val onQuestionRevealed: () -> Unit,
 ) {
     companion object {
         private const val TIMER_OFFSET_SECONDS = 3
         private const val ANSWER_REVEAL_MS = 4_000L
+        private const val REVEAL_DELAY_MS = 3_000L
     }
 
     private var mediaTimerPending = false
@@ -29,6 +31,12 @@ class TimerOrchestrator(
         revealJob = null
 
         when (current) {
+            GamePhase.RevealingQuestion -> {
+                revealJob = scope.launch {
+                    delay(REVEAL_DELAY_MS)
+                    if (engine.phase == GamePhase.RevealingQuestion) onQuestionRevealed()
+                }
+            }
             GamePhase.ShowingAnswer -> {
                 mediaTimerPending = false
                 timer.stop()

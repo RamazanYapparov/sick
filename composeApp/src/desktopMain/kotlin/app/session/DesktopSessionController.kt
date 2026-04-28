@@ -18,6 +18,7 @@ import com.sick.event.PlayerBuzzed
 import com.sick.event.PlayerJoined
 import com.sick.event.PlayerLeft
 import com.sick.event.PlayerRenamed
+import com.sick.event.QuestionRevealed
 import com.sick.event.QuestionSelected
 import com.sick.event.ResumeTimer
 import com.sick.event.SelectActivePlayer
@@ -42,7 +43,7 @@ class DesktopSessionController(
     private var engine: GameEngine = createEngine(emptyPack())
     private var timer: GameTimer = GameTimer(engine, scope)
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer)
+    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
@@ -107,6 +108,8 @@ class DesktopSessionController(
 
     fun showAnswer() = process(AnswerShown)
 
+    private fun revealQuestion() = process(QuestionRevealed)
+
     fun nextRound() = process(NextRound)
 
     fun adjustScore(playerId: UUID, delta: Int) = process(AdjustPlayerScore(playerId, delta))
@@ -150,7 +153,7 @@ class DesktopSessionController(
         engine = createEngine(pack)
         timer = GameTimer(engine, scope)
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-        timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer)
+        timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
         bindEngine(engine)
         server.start()
         publishState()

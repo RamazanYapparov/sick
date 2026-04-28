@@ -33,6 +33,7 @@ class GameEngineQuestionFlowTest {
     private fun GameEngine.advanceToShowingAnswer(player: Player) {
         process(SelectActivePlayer(player.id))
         process(QuestionSelected(QUESTION_IDS[0][0]))
+        process(QuestionRevealed)
         process(PlayerBuzzed(player.id))
         process(HostAccepted)
     }
@@ -47,7 +48,7 @@ class GameEngineQuestionFlowTest {
     }
 
     @Test
-    fun `QuestionSelected sets currentQuestion marks it played and transitions to ShowingQuestion`() {
+    fun `QuestionSelected sets currentQuestion marks it played and transitions to RevealingQuestion`() {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         val questionId = QUESTION_IDS[0][0]
@@ -57,7 +58,35 @@ class GameEngineQuestionFlowTest {
         assertTrue(result.isRight())
         assertEquals(questionId, engine.state.currentQuestion?.id)
         assertTrue(questionId in engine.state.playedQuestionIds)
+        assertEquals(GamePhase.RevealingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `QuestionRevealed transitions from RevealingQuestion to ShowingQuestion`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        assertEquals(GamePhase.RevealingQuestion, engine.phase)
+
+        val result = engine.process(QuestionRevealed)
+
+        assertTrue(result.isRight())
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
+        assertNotNull(engine.state.currentQuestion)
+    }
+
+    @Test
+    fun `SkipQuestion during RevealingQuestion transitions to ShowingAnswer`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        assertEquals(GamePhase.RevealingQuestion, engine.phase)
+
+        val result = engine.process(SkipQuestion)
+
+        assertTrue(result.isRight())
+        assertNotNull(engine.state.currentQuestion)
+        assertEquals(GamePhase.ShowingAnswer, engine.phase)
     }
 
     @Test
@@ -73,6 +102,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
         engine.process(HostRejected)  // all players failed → ShowingAnswer
         engine.process(AnswerShown)   // back to ChoosingQuestion
@@ -95,6 +125,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
 
         val result = engine.process(PlayerBuzzed(player.id))
 
@@ -108,6 +139,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
         engine.process(HostRejected)  // player added to failedBuzzPlayerIds → ShowingAnswer (only player)
 
@@ -123,6 +155,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
 
         val result = engine.process(PauseTimer)
 
@@ -136,6 +169,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PauseTimer)
 
         val result = engine.process(PlayerBuzzed(player.id))
@@ -150,6 +184,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PauseTimer)
 
         val result = engine.process(ResumeTimer)
@@ -164,6 +199,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         val before = engine.state.timerRemaining
 
         val result = engine.process(TimerTick)
@@ -178,6 +214,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PauseTimer)
         val before = engine.state.timerRemaining
 
@@ -193,6 +230,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         repeat(engine.state.timerSeconds + 5) { engine.process(TimerTick) }
         assertEquals(0, engine.state.timerRemaining)
     }
@@ -202,6 +240,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         assertNotNull(engine.state.currentQuestion)
 
         val result = engine.process(TimerExpired)
@@ -216,6 +255,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))  // price = 100
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
 
         val result = engine.process(HostAccepted)
@@ -232,6 +272,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         assertNotNull(engine.state.currentQuestion)
 
         val result = engine.process(SkipQuestion)
@@ -246,6 +287,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
 
         val result = engine.process(HostRejected)
@@ -261,6 +303,7 @@ class GameEngineQuestionFlowTest {
         val (engine, alice, bob) = engineWithTwoPlayers()
         engine.process(SelectActivePlayer(alice.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(alice.id))
 
         val result = engine.process(HostRejected)
@@ -304,6 +347,7 @@ class GameEngineQuestionFlowTest {
         val (engine, player) = engineWithPlayer()
         engine.process(SelectActivePlayer(player.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
         engine.process(HostAccepted)
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
@@ -316,7 +360,7 @@ class GameEngineQuestionFlowTest {
         val result = engine.process(QuestionSelected(QUESTION_IDS[0][1]))
 
         assertTrue(result.isRight())
-        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+        assertEquals(GamePhase.RevealingQuestion, engine.phase)
     }
 
     @Test
@@ -324,6 +368,7 @@ class GameEngineQuestionFlowTest {
         val (engine, alice, bob) = engineWithTwoPlayers()
         engine.process(SelectActivePlayer(alice.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))  // price = 100
+        engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(alice.id))
 
         val result = engine.process(HostRejected)

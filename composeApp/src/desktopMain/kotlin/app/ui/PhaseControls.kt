@@ -47,6 +47,13 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     onQuestionClick = controller::selectQuestion,
                 )
             }
+            GamePhase.RevealingQuestion -> {
+                Text("Revealing question…")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = controller::skipQuestion) {
+                    Text("Skip")
+                }
+            }
             GamePhase.ShowingQuestion -> {
                 val timerLabel = if (state.isTimerPaused) "Timer: ${state.timerRemaining}s (paused)" else "Timer: ${state.timerRemaining}s"
                 Text("Question is live. $timerLabel")

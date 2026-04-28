@@ -55,6 +55,7 @@ class GameEngine(pack: Package) {
             )
             GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, AdjustPlayerScore::class)
             GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, AdjustPlayerScore::class)
+            GamePhase.RevealingQuestion -> setOf(QuestionRevealed::class, SkipQuestion::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
                 PlayerBuzzed::class,
                 PauseTimer::class,
@@ -105,6 +106,8 @@ class GameEngine(pack: Package) {
                     failedBuzzPlayerIds = emptySet(),
                 )
             }
+
+            is QuestionRevealed -> _state
 
             is PlayerBuzzed -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
@@ -174,7 +177,8 @@ class GameEngine(pack: Package) {
     private fun nextPhase(event: GameEvent): GamePhase = when (event) {
         is StartGame -> GamePhase.ChoosingPlayer
         is SelectActivePlayer -> GamePhase.ChoosingQuestion
-        is QuestionSelected -> GamePhase.ShowingQuestion
+        is QuestionSelected -> GamePhase.RevealingQuestion
+        is QuestionRevealed -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
         is PauseTimer, is ResumeTimer -> _phase
         is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer

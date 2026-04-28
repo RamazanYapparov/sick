@@ -19,6 +19,7 @@ class GameTimerTest {
         engine.process(StartGame)
         engine.process(SelectActivePlayer(alice.id))
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
         return engine
     }
 

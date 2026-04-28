@@ -13,6 +13,7 @@ data object StartGame : GameEvent
 // Player/question selection
 data class SelectActivePlayer(val playerId: UUID) : GameEvent
 data class QuestionSelected(val questionId: UUID) : GameEvent
+data object QuestionRevealed : GameEvent
 
 // During question display
 data class PlayerBuzzed(val playerId: UUID) : GameEvent

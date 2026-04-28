@@ -22,6 +22,7 @@ class GameEngineRoundFlowTest {
     private fun GameEngine.playAndAccept(player: Player, roundIdx: Int, questionIdx: Int = 0) {
         process(SelectActivePlayer(player.id))
         process(QuestionSelected(QUESTION_IDS[roundIdx][questionIdx]))
+        process(QuestionRevealed)
         process(PlayerBuzzed(player.id))
         process(HostAccepted)
         process(AnswerShown)

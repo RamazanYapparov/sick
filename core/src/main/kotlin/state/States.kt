@@ -4,6 +4,7 @@ sealed class GamePhase(val name: String) {
     data object Lobby : GamePhase("Lobby")
     data object ChoosingPlayer : GamePhase("ChoosingPlayer")
     data object ChoosingQuestion : GamePhase("ChoosingQuestion")
+    data object RevealingQuestion : GamePhase("RevealingQuestion")
     data object ShowingQuestion : GamePhase("ShowingQuestion")
     data object PlayerAnswering : GamePhase("PlayerAnswering")
     data object ShowingAnswer : GamePhase("ShowingAnswer")

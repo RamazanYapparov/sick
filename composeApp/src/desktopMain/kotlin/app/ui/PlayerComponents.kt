@@ -55,50 +55,13 @@ internal fun PlayerChipRow(
 @Composable
 internal fun PlayerEditorRow(
     player: Player,
-    renameValue: String,
-    onRenameChange: (String) -> Unit,
-    onRenameCommit: () -> Unit,
-    onRemove: () -> Unit,
-    renameEnabled: Boolean,
     scoreDelta: String,
     onScoreChange: (String) -> Unit,
     onAdjustScore: () -> Unit,
 ) {
     Card(backgroundColor = Color.White, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
-                Button(
-                    onClick = onRemove,
-                    enabled = renameEnabled,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFD85852), contentColor = Color.White),
-                ) {
-                    Text("Remove")
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = renameValue,
-                    onValueChange = onRenameChange,
-                    label = { Text("Rename") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    enabled = renameEnabled,
-                )
-                Button(onClick = onRenameCommit, enabled = renameEnabled) {
-                    Text("Save")
-                }
-            }
-
+            Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

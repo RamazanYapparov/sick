@@ -61,7 +61,7 @@ internal fun PlayerEditorRow(
     player: Player,
     scoreDelta: String,
     onScoreChange: (String) -> Unit,
-    onAdjustScore: () -> Unit,
+    onAdjustScore: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Card(backgroundColor = Color.White, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
@@ -79,6 +79,7 @@ internal fun PlayerEditorRow(
                 }
             } else {
                 Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+                val buttonEnabled = scoreDelta.isNotBlank() && scoreDelta != "0"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -86,19 +87,30 @@ internal fun PlayerEditorRow(
                 ) {
                     OutlinedTextField(
                         value = scoreDelta,
-                        onValueChange = onScoreChange,
+                        onValueChange = { onScoreChange(it.filter(Char::isDigit)) },
                         label = { Text("Score delta") },
                         modifier = Modifier.width(140.dp),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     )
-                    Button(onClick = {
-                        onAdjustScore()
-                        expanded = false
-                    }) {
-                        Text("Apply")
+                    Button(
+                        onClick = {
+                            onAdjustScore(scoreDelta.toInt())
+                            expanded = false
+                        },
+                        enabled = buttonEnabled,
+                    ) {
+                        Text("+")
                     }
-                    Text("Use negative values to subtract.")
+                    Button(
+                        onClick = {
+                            onAdjustScore(-scoreDelta.toInt())
+                            expanded = false
+                        },
+                        enabled = buttonEnabled,
+                    ) {
+                        Text("−")
+                    }
                 }
             }
         }

@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Score editor collapsed by default
 Each player row in the host screen SHALL show only the player name, current score, and an "Edit" button when first rendered. Score delta input, "+" button, and "−" button SHALL NOT be visible in the collapsed state.
 
@@ -32,6 +34,8 @@ The player row SHALL return to collapsed state after the host clicks "+" or "−
 - **THEN** the score is decreased by the entered amount
 - **THEN** the score delta input, "+" button, and "−" button are hidden
 - **THEN** the updated score is shown in the collapsed row
+
+## ADDED Requirements
 
 ### Requirement: Score delta input accepts only positive integers
 The score delta input field SHALL accept only positive integer values. Negative numbers and non-numeric characters SHALL NOT be enterable.

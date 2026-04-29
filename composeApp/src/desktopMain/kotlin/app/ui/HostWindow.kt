@@ -94,11 +94,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                     player = player,
                                     scoreDelta = scoreValue,
                                     onScoreChange = { scoreDrafts[scoreKey] = it },
-                                    onAdjustScore = {
-                                        scoreDrafts[scoreKey]?.toIntOrNull()?.let { delta ->
-                                            controller.adjustScore(player.id, delta)
-                                        }
-                                    },
+                                    onAdjustScore = { controller.adjustScore(player.id, it) },
                                 )
                             }
                         }

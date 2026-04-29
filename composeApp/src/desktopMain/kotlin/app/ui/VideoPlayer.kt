@@ -53,7 +53,7 @@ private object JavaFxInit {
 }
 
 @Composable
-fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, onFinished: () -> Unit = {}) {
+fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, paused: Boolean = false, onFinished: () -> Unit = {}) {
     val jfxPanel = remember { JFXPanel() }
     val playerRef = remember { arrayOfNulls<MediaPlayer>(1) }
     var progress by remember { mutableStateOf(0f) }
@@ -63,6 +63,22 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     LaunchedEffect(stopSignal) {
         if (stopSignal > 0) {
             JfxPlatform.runLater { playerRef[0]?.stop() }
+        }
+    }
+
+    LaunchedEffect(paused) {
+        if (paused) {
+            JfxPlatform.runLater { playerRef[0]?.pause() }
+        } else {
+            JfxPlatform.runLater {
+                val player = playerRef[0]
+                if (player != null &&
+                    player.status != MediaPlayer.Status.STOPPED &&
+                    player.status != MediaPlayer.Status.DISPOSED
+                ) {
+                    player.play()
+                }
+            }
         }
     }
 

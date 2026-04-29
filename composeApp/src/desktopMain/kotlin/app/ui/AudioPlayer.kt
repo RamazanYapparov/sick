@@ -49,7 +49,7 @@ private object AudioJavaFxInit {
 }
 
 @Composable
-fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, onFinished: () -> Unit = {}) {
+fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, paused: Boolean = false, onFinished: () -> Unit = {}) {
     val playerRef = remember { arrayOfNulls<MediaPlayer>(1) }
     var playing by remember { mutableStateOf(true) }
     var progress by remember { mutableStateOf(0f) }
@@ -60,6 +60,22 @@ fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
         if (stopSignal > 0) {
             playing = false
             JfxPlatform.runLater { playerRef[0]?.stop() }
+        }
+    }
+
+    LaunchedEffect(paused) {
+        if (paused) {
+            JfxPlatform.runLater { playerRef[0]?.pause() }
+        } else {
+            JfxPlatform.runLater {
+                val player = playerRef[0]
+                if (player != null &&
+                    player.status != MediaPlayer.Status.STOPPED &&
+                    player.status != MediaPlayer.Status.DISPOSED
+                ) {
+                    player.play()
+                }
+            }
         }
     }
 

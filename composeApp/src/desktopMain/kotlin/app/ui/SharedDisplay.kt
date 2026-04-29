@@ -263,6 +263,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                                 uri = uri,
                                 modifier = Modifier.fillMaxWidth().height(360.dp),
                                 stopSignal = state.mediaStopSignal,
+                                paused = state.mediaPaused,
                                 onFinished = onMediaFinished,
                             )
                         }
@@ -275,6 +276,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                                 uri = item.url.toString(),
                                 modifier = Modifier.fillMaxWidth().height(360.dp),
                                 stopSignal = state.mediaStopSignal,
+                                paused = state.mediaPaused,
                                 onFinished = onMediaFinished,
                             )
                         }
@@ -289,6 +291,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                             AudioPlayer(
                                 uri = uri,
                                 stopSignal = state.mediaStopSignal,
+                                paused = state.mediaPaused,
                                 onFinished = onMediaFinished,
                             )
                         }
@@ -300,6 +303,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                             AudioPlayer(
                                 uri = item.url.toString(),
                                 stopSignal = state.mediaStopSignal,
+                                paused = state.mediaPaused,
                                 onFinished = onMediaFinished,
                             )
                         }

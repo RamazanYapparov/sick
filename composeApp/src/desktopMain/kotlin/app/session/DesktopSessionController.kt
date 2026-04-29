@@ -45,6 +45,8 @@ class DesktopSessionController(
     private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
 
     private var mediaStopSignal = 0
+    private var mediaPaused = false
+    private var lastKnownPhase: GamePhase = GamePhase.Lobby
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
@@ -170,13 +172,28 @@ class DesktopSessionController(
         timer = GameTimer(engine, scope)
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
         timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
+        mediaPaused = false
         bindEngine(engine)
         server.start()
         publishState()
     }
 
     private fun bindEngine(target: GameEngine) {
-        target.addListener { _, _ ->
+        lastKnownPhase = target.phase
+        target.addListener { _, newPhase ->
+            val previousPhase = lastKnownPhase
+            lastKnownPhase = newPhase
+            val isMediaActive = timerOrchestrator.isMediaPending
+            when {
+                previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && isMediaActive ->
+                    mediaPaused = true
+                previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingQuestion ->
+                    mediaPaused = false
+                previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingAnswer -> {
+                    mediaPaused = false
+                    mediaStopSignal++
+                }
+            }
             publishState()
         }
     }
@@ -190,6 +207,7 @@ class DesktopSessionController(
         ).copy(
             mediaActive = timerOrchestrator.isMediaPending,
             mediaStopSignal = mediaStopSignal,
+            mediaPaused = mediaPaused,
         )
     }
 

@@ -93,9 +93,41 @@ class DesktopSessionController(
         process(PlayerBuzzed(playerId))
     }
 
-    fun pauseTimer() = process(PauseTimer)
+    fun pauseTimer() {
+        mediaPaused = true
+        val previousPhase = engine.phase
+        val wasTimerPaused = engine.state.isTimerPaused
+        engine.process(PauseTimer).fold(
+            ifLeft = { error ->
+                mediaPaused = false
+                setError(error.message)
+            },
+            ifRight = {
+                timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
+                clearMessages()
+                publishState()
+                autoSelectIfSingleCandidate()
+            },
+        )
+    }
 
-    fun resumeTimer() = process(ResumeTimer)
+    fun resumeTimer() {
+        mediaPaused = false
+        val previousPhase = engine.phase
+        val wasTimerPaused = engine.state.isTimerPaused
+        engine.process(ResumeTimer).fold(
+            ifLeft = { error ->
+                mediaPaused = true
+                setError(error.message)
+            },
+            ifRight = {
+                timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
+                clearMessages()
+                publishState()
+                autoSelectIfSingleCandidate()
+            },
+        )
+    }
 
     fun markAnswerCorrect() = process(HostAccepted)
 

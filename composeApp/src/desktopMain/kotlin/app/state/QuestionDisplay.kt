@@ -16,7 +16,9 @@ sealed interface QuestionDisplayItem {
 }
 
 fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
-    contents.map { content ->
+    contents
+        .sortedWith { item, _ -> if (item is Content.Text) -1 else 1 }
+        .map { content ->
         when (content) {
             is Content.Text -> QuestionDisplayItem.Text(content.text)
             is Content.Media.FileRef -> when (content.type) {

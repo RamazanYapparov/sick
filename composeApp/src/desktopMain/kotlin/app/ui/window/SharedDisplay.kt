@@ -107,6 +107,7 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
                 themes = state.boardThemes,
                 enabled = false,
                 onQuestionClick = {},
+                showCompleted = state.showCompleted,
             )
         }
     }

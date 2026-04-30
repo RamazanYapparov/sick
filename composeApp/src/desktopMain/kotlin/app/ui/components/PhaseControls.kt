@@ -46,6 +46,8 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     themes = state.boardThemes,
                     enabled = true,
                     onQuestionClick = controller::selectQuestion,
+                    showCompleted = state.showCompleted,
+                    onShowCompletedToggle = controller::toggleShowCompleted,
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::skipRound) {

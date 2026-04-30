@@ -46,6 +46,7 @@ class DesktopSessionController(
 
     private var mediaStopSignal = 0
     private var mediaPaused = false
+    private var showCompleted = false
     private var lastKnownPhase: GamePhase = GamePhase.Lobby
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
@@ -87,7 +88,15 @@ class DesktopSessionController(
 
     fun selectActivePlayer(playerId: UUID) = process(SelectActivePlayer(playerId))
 
-    fun selectQuestion(questionId: UUID) = process(QuestionSelected(questionId))
+    fun toggleShowCompleted() {
+        showCompleted = !showCompleted
+        uiState = uiState.copy(showCompleted = showCompleted)
+    }
+
+    fun selectQuestion(questionId: UUID) {
+        showCompleted = false
+        process(QuestionSelected(questionId))
+    }
 
     fun chooseAnsweringPlayer(playerId: UUID) {
         process(PlayerBuzzed(playerId))
@@ -240,6 +249,7 @@ class DesktopSessionController(
             mediaActive = timerOrchestrator.isMediaPending,
             mediaStopSignal = mediaStopSignal,
             mediaPaused = mediaPaused,
+            showCompleted = showCompleted,
         )
     }
 

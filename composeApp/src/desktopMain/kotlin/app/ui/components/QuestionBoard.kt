@@ -29,14 +29,31 @@ internal fun QuestionBoard(
     themes: List<BoardThemeState>,
     enabled: Boolean,
     onQuestionClick: (UUID) -> Unit,
+    showCompleted: Boolean = false,
+    onShowCompletedToggle: (() -> Unit)? = null,
 ) {
     if (themes.isEmpty()) {
         Text("No questions available.", color = MaterialTheme.colors.onSurface)
         return
     }
 
+    val completedThemes = themes.filter { theme -> theme.questions.all { it.played } }
+    val activeThemes = themes.filter { theme -> !theme.questions.all { it.played } }
+    val visibleThemes = if (showCompleted) themes else activeThemes
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        themes.forEach { theme ->
+        if (completedThemes.isNotEmpty() && onShowCompletedToggle != null) {
+            Button(
+                onClick = onShowCompletedToggle,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color(0xFFB3AA9E),
+                    contentColor = Color.White,
+                ),
+            ) {
+                Text(if (showCompleted) "Hide completed" else "Show completed")
+            }
+        }
+        visibleThemes.forEach { theme ->
             Card(
                 backgroundColor = Color(0xFFE9DDBE),
                 shape = RoundedCornerShape(16.dp),

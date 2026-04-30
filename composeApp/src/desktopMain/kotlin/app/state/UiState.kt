@@ -34,6 +34,7 @@ data class DesktopUiState(
     val serverUrl: String,
     val displayWindowVisible: Boolean,
     val hasPack: Boolean,
+    val showCompleted: Boolean = false,
 ) {
     companion object {
         fun initial(port: Int) = DesktopUiState(

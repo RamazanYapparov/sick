@@ -3,9 +3,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
-import app.ui.HostWindowContent
-import app.ui.Palette
-import app.ui.SharedDisplayScreen
+import app.ui.window.HostWindowContent
+import app.ui.window.SharedDisplayScreen
+import app.ui.theme.Palette
 
 @Composable
 fun HostApp(controller: DesktopSessionController) {

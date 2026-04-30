@@ -1,5 +1,10 @@
-package app.ui
+package app.ui.window
 
+import app.ui.components.QuestionBoard
+import app.ui.components.Scoreboard
+import app.ui.theme.Palette
+import app.ui.media.AudioPlayer
+import app.ui.media.VideoPlayer
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
@@ -71,7 +76,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
 
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(state.currentQuestion!!.answer, compact, bodySize)
+                    AnswerPanel(state.currentQuestion.answer, compact, bodySize)
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->

@@ -1,12 +1,12 @@
-package app.ui
+package app.ui.media
 
+import app.ui.theme.Palette
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,17 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import javafx.application.Platform as JfxPlatform
 import javafx.embed.swing.JFXPanel
-import javafx.scene.Scene
-import javafx.scene.layout.StackPane
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
-import javafx.scene.media.MediaView
 
 private fun formatMillis(ms: Double): String {
     val total = (ms / 1000).toInt()
@@ -39,7 +36,7 @@ private fun formatMillis(ms: Double): String {
     return "$min:${sec.toString().padStart(2, '0')}"
 }
 
-private object JavaFxInit {
+private object AudioJavaFxInit {
     @Volatile private var started = false
 
     fun ensureStarted() {
@@ -53,15 +50,16 @@ private object JavaFxInit {
 }
 
 @Composable
-fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, paused: Boolean = false, onFinished: () -> Unit = {}) {
-    val jfxPanel = remember { JFXPanel() }
+fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, paused: Boolean = false, onFinished: () -> Unit = {}) {
     val playerRef = remember { arrayOfNulls<MediaPlayer>(1) }
+    var playing by remember { mutableStateOf(true) }
     var progress by remember { mutableStateOf(0f) }
     var currentMs by remember { mutableStateOf(0.0) }
     var totalMs by remember { mutableStateOf(0.0) }
 
     LaunchedEffect(stopSignal) {
         if (stopSignal > 0) {
+            playing = false
             JfxPlatform.runLater { playerRef[0]?.stop() }
         }
     }
@@ -83,12 +81,20 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     }
 
     DisposableEffect(uri) {
-        JavaFxInit.ensureStarted()
+        AudioJavaFxInit.ensureStarted()
+        // JFXPanel must be instantiated to keep the JavaFX toolkit alive for audio-only playback
+        @Suppress("UNUSED_VARIABLE")
+        val panel = JFXPanel()
         JfxPlatform.runLater {
             val media = runCatching { Media(uri) }.getOrElse { return@runLater }
             val player = MediaPlayer(media).also { playerRef[0] = it }
-            player.setOnError { println("VideoPlayer error: ${player.error?.message}") }
-            player.setOnEndOfMedia { JfxPlatform.runLater { onFinished() } }
+            player.setOnError { println("AudioPlayer error: ${player.error?.message}") }
+            player.setOnEndOfMedia {
+                JfxPlatform.runLater {
+                    playing = false
+                    onFinished()
+                }
+            }
             player.currentTimeProperty().addListener { _, _, newTime ->
                 val total = player.totalDuration?.toMillis() ?: 0.0
                 if (total > 0) {
@@ -97,11 +103,6 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
                     progress = (currentMs / total).toFloat().coerceIn(0f, 1f)
                 }
             }
-            val view = MediaView(player).apply { isPreserveRatio = true }
-            val root = StackPane(view)
-            root.widthProperty().addListener  { _, _, w -> view.fitWidth  = w.toDouble() }
-            root.heightProperty().addListener { _, _, h -> view.fitHeight = h.toDouble() }
-            jfxPanel.scene = Scene(root)
             player.play()
         }
         onDispose {
@@ -109,38 +110,37 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
         }
     }
 
-    Box(modifier = modifier) {
-        SwingPanel(factory = { jfxPanel }, modifier = Modifier.fillMaxSize())
-        if (totalMs > 0) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(Color(0xAA000000))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(4.dp).background(Color(0x44FFFFFF)),
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Palette.AccentGold),
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = formatMillis(currentMs),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = formatMillis(totalMs),
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 11.sp,
-                    )
-                }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .background(Color(0xFF1A2A35)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = if (playing) "♫  Playing audio..." else "♫  Done",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = Palette.AccentGold,
+            )
+            if (totalMs > 0) {
+                Text(
+                    text = "${formatMillis(currentMs)} / ${formatMillis(totalMs)}",
+                    fontSize = 13.sp,
+                    color = Palette.AccentGold.copy(alpha = 0.7f),
+                )
             }
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth().height(4.dp).background(Color(0xFF0D1C24)),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Palette.AccentGold),
+            )
         }
     }
 }

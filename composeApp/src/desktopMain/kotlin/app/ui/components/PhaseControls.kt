@@ -1,5 +1,6 @@
-package app.ui
+package app.ui.components
 
+import app.ui.theme.Palette
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
 import app.state.hostSummary

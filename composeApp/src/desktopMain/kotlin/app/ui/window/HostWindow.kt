@@ -1,7 +1,12 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
-package app.ui
+package app.ui.window
 
+import app.ui.components.SectionCard
+import app.ui.components.PlayerEditorRow
+import app.ui.components.PhaseControls
+import app.ui.components.HostAnswerCard
+import app.ui.theme.Palette
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
 import androidx.compose.foundation.background

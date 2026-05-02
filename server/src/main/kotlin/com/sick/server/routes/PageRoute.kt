@@ -91,12 +91,18 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       cursor: default;
     }
     #buzz {
-      margin-top: 1.5rem;
+      flex: 2;
+      border-radius: 0;
+      padding: 0;
+      font-size: clamp(2.5rem, 8vw, 5rem);
       background: linear-gradient(135deg, #ff795e 0%, #ff3d54 100%);
       color: white;
     }
     #skip {
-      margin-top: 0.75rem;
+      flex: 1;
+      border-radius: 0;
+      padding: 0;
+      font-size: clamp(2.5rem, 8vw, 5rem);
       background: linear-gradient(135deg, #6ec6a0 0%, #2e9e6b 100%);
       color: white;
     }
@@ -111,11 +117,29 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       margin-top: 0.5rem;
     }
     #status {
-      min-height: 1.5rem;
-      margin-top: 1rem;
+      min-height: 1rem;
     }
     #buzz-section {
       display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      flex-direction: column;
+    }
+    #player-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 1.5rem;
+      background: rgba(0, 0, 0, 0.5);
+      color: #bfd1eb;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      pointer-events: none;
+      user-select: none;
     }
   </style>
 </head>
@@ -128,13 +152,15 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       <button id="join-btn" onclick="doJoin()">JOIN</button>
       <p id="join-error"></p>
     </div>
-    <div id="buzz-section">
-      <p id="greeting"></p>
-      <button id="buzz" onclick="doBuzz()">BUZZ!</button>
-      <button id="skip" onclick="doSkip()">SKIP</button>
-      <p id="status"></p>
-    </div>
   </main>
+  <div id="buzz-section">
+    <button id="skip" onclick="doSkip()">SKIP</button>
+    <div id="player-strip">
+      <span id="greeting"></span>
+      <span id="status"></span>
+    </div>
+    <button id="buzz" onclick="doBuzz()">BUZZ!</button>
+  </div>
   <script>
     let playerId = null;
 
@@ -158,8 +184,8 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
         if (response.ok) {
           return response.json().then(function(data) {
             playerId = data.playerId;
-            document.getElementById('join-section').style.display = 'none';
-            document.getElementById('buzz-section').style.display = 'block';
+            document.querySelector('main').style.display = 'none';
+            document.getElementById('buzz-section').style.display = 'flex';
             document.getElementById('greeting').textContent = 'Hello, ' + name + '!';
           });
         }

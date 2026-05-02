@@ -71,7 +71,8 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       box-shadow: 0 0 0 3px rgba(94, 200, 248, 0.25);
     }
     #join-btn,
-    #buzz {
+    #buzz,
+    #skip {
       width: 100%;
       border: 0;
       border-radius: 999px;
@@ -94,8 +95,14 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       background: linear-gradient(135deg, #ff795e 0%, #ff3d54 100%);
       color: white;
     }
+    #skip {
+      margin-top: 0.75rem;
+      background: linear-gradient(135deg, #6ec6a0 0%, #2e9e6b 100%);
+      color: white;
+    }
     #join-btn:active,
-    #buzz:active {
+    #buzz:active,
+    #skip:active {
       transform: scale(0.98);
     }
     #join-error {
@@ -124,6 +131,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
     <div id="buzz-section">
       <p id="greeting"></p>
       <button id="buzz" onclick="doBuzz()">BUZZ!</button>
+      <button id="skip" onclick="doSkip()">SKIP</button>
       <p id="status"></p>
     </div>
   </main>
@@ -180,6 +188,28 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       }).catch(function() {
         document.getElementById('status').textContent = 'Connection lost.';
         buzzBtn.disabled = false;
+      });
+    }
+
+    function doSkip() {
+      document.getElementById('status').textContent = '';
+      if (!playerId) return;
+      const skipBtn = document.getElementById('skip');
+      skipBtn.disabled = true;
+      fetch('/skip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'playerId=' + encodeURIComponent(playerId)
+      }).then(function(response) {
+        if (response.ok) {
+          document.getElementById('status').textContent = 'Skipped!';
+        } else {
+          document.getElementById('status').textContent = 'Too late!';
+          skipBtn.disabled = false;
+        }
+      }).catch(function() {
+        document.getElementById('status').textContent = 'Connection lost.';
+        skipBtn.disabled = false;
       });
     }
   </script>

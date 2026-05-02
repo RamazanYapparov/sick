@@ -4,6 +4,7 @@ import com.sick.engine.GameEngine
 import com.sick.server.routes.installBuzzRoute
 import com.sick.server.routes.installJoinRoute
 import com.sick.server.routes.installPageRoute
+import com.sick.server.routes.installSkipRoute
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
@@ -23,6 +24,7 @@ class GameServer(
         server = embeddedServer(CIO, port = port, host = "0.0.0.0") {
             installPageRoute()
             installBuzzRoute(engine, buzzAllowed)
+            installSkipRoute(engine, buzzAllowed)
             installJoinRoute(engine)
         }.start(wait = false)
     }

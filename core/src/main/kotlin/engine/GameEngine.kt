@@ -58,6 +58,7 @@ class GameEngine(pack: Package) {
             GamePhase.RevealingQuestion -> setOf(QuestionRevealed::class, SkipQuestion::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
                 PlayerBuzzed::class,
+                PlayerSkipped::class,
                 PauseTimer::class,
                 ResumeTimer::class,
                 TimerTick::class,
@@ -104,6 +105,7 @@ class GameEngine(pack: Package) {
                     timerRemaining = _state.timerSeconds,
                     isTimerPaused = false,
                     failedBuzzPlayerIds = emptySet(),
+                    skipVotePlayerIds = emptySet(),
                 )
             }
 
@@ -112,6 +114,24 @@ class GameEngine(pack: Package) {
             is PlayerBuzzed -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 _state.copy(answeringPlayerId = event.playerId)
+            }
+
+            is PlayerSkipped -> {
+                ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
+                ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
+                val newVotes = _state.skipVotePlayerIds + event.playerId
+                val eligibleIds = _state.players.map { it.id }.toSet() - _state.failedBuzzPlayerIds
+                if (newVotes.containsAll(eligibleIds)) {
+                    _state.copy(
+                        answeringPlayerId = null,
+                        timerRemaining = 0,
+                        isTimerPaused = false,
+                        failedBuzzPlayerIds = emptySet(),
+                        skipVotePlayerIds = emptySet(),
+                    )
+                } else {
+                    _state.copy(skipVotePlayerIds = newVotes)
+                }
             }
 
             is PauseTimer -> _state.copy(isTimerPaused = true)
@@ -194,6 +214,7 @@ class GameEngine(pack: Package) {
         is QuestionSelected -> GamePhase.RevealingQuestion
         is QuestionRevealed -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
+        is PlayerSkipped -> if (_state.skipVotePlayerIds.isEmpty()) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
         is PauseTimer, is ResumeTimer -> _phase
         is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer
         is SkipQuestion -> GamePhase.ShowingAnswer

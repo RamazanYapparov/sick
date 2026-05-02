@@ -14,6 +14,7 @@ data class GameState(
     val timerRemaining: Int = 0,
     val isTimerPaused: Boolean = false,
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),
+    val skipVotePlayerIds: Set<UUID> = emptySet(),
 ) {
     val currentRound: Round? get() = pack.rounds.getOrNull(currentRoundIndex)
 

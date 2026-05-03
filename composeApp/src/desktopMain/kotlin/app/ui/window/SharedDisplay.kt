@@ -1,7 +1,7 @@
 package app.ui.window
 
+import app.ui.components.PlayerCards
 import app.ui.components.QuestionBoard
-import app.ui.components.Scoreboard
 import app.ui.theme.Palette
 import app.ui.media.AudioPlayer
 import app.ui.media.VideoPlayer
@@ -42,7 +42,6 @@ import com.sick.state.GamePhase
 @Composable
 internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMediaFinished: () -> Unit = {}) {
     val pad = if (compact) 12.dp else 24.dp
-    val titleSize = if (compact) 18.sp else 34.sp
     val bodySize = if (compact) 12.sp else 22.sp
     val timerSize = if (compact) 24.sp else 46.sp
 
@@ -54,26 +53,13 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
             modifier = Modifier.fillMaxSize().padding(pad),
             verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(state.packName, fontSize = titleSize, fontWeight = FontWeight.Bold)
-                    val roundLine = buildString {
-                        if (state.roundName != null) {
-                            append("Round ${state.currentRoundIndex}/${state.totalRounds}: ${state.roundName}")
-                        } else {
-                            append("Lobby")
-                        }
-                    }
-                    Text(roundLine, fontSize = bodySize, color = Palette.AccentGold)
-                    Text("Phase: ${state.phase.name}", fontSize = bodySize)
-                }
-                Scoreboard(state.players, state.activePlayerId, state.answeringPlayerId, compact)
-            }
+            Text(
+                if (state.roundName != null) "Round ${state.currentRoundIndex} / ${state.totalRounds}" else "Lobby",
+                fontSize = bodySize,
+                color = Palette.AccentGold,
+            )
 
+            Box(modifier = Modifier.weight(1f)) {
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
                     AnswerPanel(state.currentQuestion.answer, compact, bodySize)
@@ -84,6 +70,8 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                 else ->
                     BoardOverview(state, compact)
             }
+            }
+            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, compact)
         }
     }
 }
@@ -91,11 +79,11 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
 @Composable
 private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         backgroundColor = Palette.DarkSurface,
         shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 20.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(if (compact) 12.dp else 20.dp)) {
             Text(
                 if (state.boardThemes.isEmpty()) "Load a pack to begin." else "Board",
                 fontSize = if (compact) 16.sp else 26.sp,
@@ -108,6 +96,7 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
                 enabled = false,
                 onQuestionClick = {},
                 showCompleted = state.showCompleted,
+                fillHeight = true,
             )
         }
     }

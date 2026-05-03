@@ -220,8 +220,6 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
     function doSkip() {
       document.getElementById('status').textContent = '';
       if (!playerId) return;
-      const skipBtn = document.getElementById('skip');
-      skipBtn.disabled = true;
       fetch('/skip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -231,11 +229,9 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
           document.getElementById('status').textContent = 'Skipped!';
         } else {
           document.getElementById('status').textContent = 'Too late!';
-          skipBtn.disabled = false;
         }
       }).catch(function() {
         document.getElementById('status').textContent = 'Connection lost.';
-        skipBtn.disabled = false;
       });
     }
   </script>

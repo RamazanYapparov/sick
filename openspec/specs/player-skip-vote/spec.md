@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Player can vote to skip the current question
 During the `ShowingQuestion` phase, any eligible player (one who has not previously given a wrong answer on the current question) SHALL be able to submit a `PlayerSkipped` vote. A player who is already in `failedBuzzPlayerIds` SHALL NOT be allowed to vote to skip.
@@ -61,15 +61,15 @@ The server SHALL expose `POST /skip` that accepts a `playerId` form parameter an
 - **THEN** the server responds `400 Bad Request` and the engine state is unchanged
 
 ### Requirement: Player UI exposes a SKIP control
-The browser buzzer page SHALL render a SKIP button alongside the BUZZ button after a player has joined. The SKIP button SHALL POST the joined player's ID to `/skip` and reflect the response in the page status area.
+The browser buzzer page SHALL render a SKIP button alongside the BUZZ button after a player has joined. The SKIP button SHALL POST the joined player's ID to `/skip` and reflect the response in the page status area. The SKIP button SHALL remain enabled at all times; the server is responsible for rejecting invalid votes.
 
 #### Scenario: Player taps SKIP and the vote is recorded
 - **WHEN** a joined player clicks the SKIP button and the server responds `200 OK`
-- **THEN** the page shows a "Skipped!" status and the SKIP button is left disabled
+- **THEN** the page shows a "Skipped!" status and the SKIP button remains enabled
 
 #### Scenario: Player taps SKIP and the vote is rejected
 - **WHEN** a joined player clicks the SKIP button and the server responds `400`
-- **THEN** the page shows a "Too late!" status and the SKIP button is re-enabled so the player can try again on a future question
+- **THEN** the page shows a "Too late!" status and the SKIP button remains enabled
 
 #### Scenario: SKIP button hidden before joining
 - **WHEN** the page first loads and the player has not yet joined

@@ -1,11 +1,19 @@
 package app.session
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.FilenameFilter
 import java.nio.file.Path
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+
+private sealed interface PickError {
+    data object Cancelled : PickError
+    data object Unavailable : PickError
+}
 
 fun pickSiqFile(): Path? {
     val os = System.getProperty("os.name").lowercase()
@@ -47,32 +55,41 @@ private fun pickWindows(): Path? {
 }
 
 private fun pickLinux(): Path? {
-    return tryKdialog() ?: tryZenity() ?: pickSwing()
+    for (attempt in listOf(::tryKdialog, ::tryZenity)) {
+        when (val r = attempt()) {
+            is Either.Right -> return r.value
+            is Either.Left -> when (r.value) {
+                PickError.Cancelled -> return null
+                PickError.Unavailable -> continue
+            }
+        }
+    }
+    return pickSwing()
 }
 
-private fun tryKdialog(): Path? {
+private fun tryKdialog(): Either<PickError, Path> {
     return try {
         val proc = ProcessBuilder("kdialog", "--getopenfilename", ".", "*.siq")
             .redirectErrorStream(false)
             .start()
         val output = proc.inputStream.bufferedReader().readText().trim()
         val exit = proc.waitFor()
-        if (exit == 0 && output.isNotBlank()) Path.of(output) else null
+        if (exit == 0 && output.isNotBlank()) Path.of(output).right() else PickError.Cancelled.left()
     } catch (_: Exception) {
-        null
+        PickError.Unavailable.left()
     }
 }
 
-private fun tryZenity(): Path? {
+private fun tryZenity(): Either<PickError, Path> {
     return try {
         val proc = ProcessBuilder("zenity", "--file-selection", "--file-filter=*.siq")
             .redirectErrorStream(false)
             .start()
         val output = proc.inputStream.bufferedReader().readText().trim()
         val exit = proc.waitFor()
-        if (exit == 0 && output.isNotBlank()) Path.of(output) else null
+        if (exit == 0 && output.isNotBlank()) Path.of(output).right() else PickError.Cancelled.left()
     } catch (_: Exception) {
-        null
+        PickError.Unavailable.left()
     }
 }
 

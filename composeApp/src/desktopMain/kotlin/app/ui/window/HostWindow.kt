@@ -70,9 +70,6 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                         Button(onClick = controller::resetGame) {
                             Text("Create Game")
                         }
-                        Button(onClick = controller::showDisplayWindow) {
-                            Text("Show Display")
-                        }
                     }
                     Spacer(Modifier.height(8.dp))
                     Text("Phase: ${state.phase.name}")

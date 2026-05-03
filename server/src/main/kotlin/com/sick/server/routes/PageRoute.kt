@@ -163,6 +163,26 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
   </div>
   <script>
     let playerId = null;
+    let wakeLockSentinel = null;
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        console.warn('Screen Wake Lock API not supported in this browser.');
+        return;
+      }
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+      } catch (e) {
+        console.warn('Wake lock request failed:', e);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible' &&
+          document.getElementById('buzz-section').style.display === 'flex') {
+        requestWakeLock();
+      }
+    });
 
     document.getElementById('name-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') doJoin();
@@ -187,6 +207,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
             document.querySelector('main').style.display = 'none';
             document.getElementById('buzz-section').style.display = 'flex';
             document.getElementById('greeting').textContent = 'Hello, ' + name + '!';
+            requestWakeLock();
           });
         }
         return response.text().then(function(msg) {

@@ -60,6 +60,7 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     var progress by remember { mutableStateOf(0f) }
     var currentMs by remember { mutableStateOf(0.0) }
     var totalMs by remember { mutableStateOf(0.0) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(stopSignal) {
         if (stopSignal > 0) {
@@ -84,11 +85,23 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     }
 
     DisposableEffect(uri) {
+        errorMessage = null
         JavaFxInit.ensureStarted()
         JfxPlatform.runLater {
-            val media = runCatching { Media(uri) }.getOrElse { return@runLater }
+            val media = try {
+                Media(uri)
+            } catch (e: Exception) {
+                val msg = "Video could not be loaded: ${e.message}"
+                println("VideoPlayer error: $msg")
+                errorMessage = msg
+                return@runLater
+            }
             val player = MediaPlayer(media).also { playerRef[0] = it }
-            player.setOnError { println("VideoPlayer error: ${player.error?.message}") }
+            player.setOnError {
+                val msg = "VideoPlayer error: ${player.error?.message}"
+                println(msg)
+                errorMessage = msg
+            }
             player.setOnEndOfMedia { JfxPlatform.runLater { onFinished() } }
             player.currentTimeProperty().addListener { _, _, newTime ->
                 val total = player.totalDuration?.toMillis() ?: 0.0
@@ -102,16 +115,40 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
             val root = StackPane(view)
             root.widthProperty().addListener  { _, _, w -> view.fitWidth  = w.toDouble() }
             root.heightProperty().addListener { _, _, h -> view.fitHeight = h.toDouble() }
+            // Guard: if disposed while setting up, skip attaching the scene
+            if (playerRef[0] == null) {
+                player.dispose()
+                return@runLater
+            }
             jfxPanel.scene = Scene(root)
             player.play()
         }
         onDispose {
-            JfxPlatform.runLater { playerRef[0]?.dispose(); playerRef[0] = null }
+            // Block until disposal completes on the JavaFX thread so the next
+            // setup's runLater cannot start until this player is fully gone.
+            val latch = java.util.concurrent.CountDownLatch(1)
+            JfxPlatform.runLater {
+                try {
+                    playerRef[0]?.dispose()
+                    playerRef[0] = null
+                } finally {
+                    latch.countDown()
+                }
+            }
+            latch.await()
         }
     }
 
     Box(modifier = modifier) {
         SwingPanel(factory = { jfxPanel }, modifier = Modifier.fillMaxSize())
+        val err = errorMessage
+        if (err != null) {
+            Text(
+                text = err,
+                color = Color.Red,
+                modifier = Modifier.align(Alignment.Center).padding(16.dp),
+            )
+        }
         if (totalMs > 0) {
             Column(
                 modifier = Modifier

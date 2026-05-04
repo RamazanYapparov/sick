@@ -14,7 +14,7 @@ fun XmlQuestion.toDomain() = Question(
 )
 
 fun XmlQuestion.toQuestionType(): Question.Type = when (type) {
-    null, "simple", "forAll" -> Question.Type.Simple
+    null, "", "simple", "forAll" -> Question.Type.Simple
     "stake" -> Question.Type.Stake
     "noRisk" -> Question.Type.NoRisk
     "secret", "secretPublicPrice" /* todo account this type as well */ ->
@@ -33,7 +33,7 @@ fun XmlNumberSet.toPricingRule() = Question.Type.Secret.PricingRule(
 
 fun XmlQuestion.toAnswer() = if (findParamByName("answerType")?.value == "select") {
     Answer.Select(
-        firstParamByName("answerOptions").param.map {
+        firstParamByName("answerOptions")?.param.orEmpty().map {
             Answer.Select.Option(
                 name = it.name,
                 answer = it.item.single().value,
@@ -48,26 +48,32 @@ fun XmlQuestion.toAnswer() = if (findParamByName("answerType")?.value == "select
     )
 }
 
-fun XmlQuestion.toContent() = firstParamByName("question").item.map { it.toContent() }
-
-fun Item.toContent() = if (type == null) {
-    Content.Text(value)
+fun Item.toContentOrNull(): Content? = if (type == null || type == "say") {
+    Content.Text(value ?: "")
 } else {
+    val rawValue = value ?: ""
     val mediaType = when (type) {
         "image" -> Content.Type.Image
         "audio" -> Content.Type.Audio
         "video" -> Content.Type.Video
+        "voice" -> Content.Type.Audio
+        "marker" -> return null
 
-        else -> throw UnsupportedOperationException("Media type $type is unsupported")
+        else -> return if (rawValue.isBlank()) null else Content.Text(rawValue)
     }
-    if (isRef == "True") {
-        Content.Media.FileRef(mediaType, value)
+    if (isRef == "True" || rawValue.startsWith("@")) {
+        Content.Media.FileRef(mediaType, rawValue.removePrefix("@"))
     } else {
-        Content.Media.FileUrl(mediaType, URL(value))
+        Content.Media.FileUrl(mediaType, URL(rawValue))
     }
 }
 
-private fun XmlQuestion.findParamByName(name: String) = params.param.find { it.name == name }
-private fun XmlQuestion.firstParamByName(name: String) = params.param.first { it.name == name }
-private fun XmlQuestion.findParamByType(type: String) = params.param.find { it.type == type }
-private fun XmlQuestion.firstParamByType(type: String) = params.param.first { it.type == type }
+fun XmlQuestion.toContent(): List<Content> {
+    val items = firstParamByName("question")?.item ?: scenario?.atom.orEmpty()
+    return items.mapNotNull { it.toContentOrNull() }
+}
+
+private fun XmlQuestion.findParamByName(name: String) = params?.param.orEmpty().find { it.name == name }
+private fun XmlQuestion.firstParamByName(name: String) = params?.param.orEmpty().firstOrNull { it.name == name }
+private fun XmlQuestion.findParamByType(type: String) = params?.param.orEmpty().find { it.type == type }
+private fun XmlQuestion.firstParamByType(type: String) = params?.param.orEmpty().firstOrNull { it.type == type }

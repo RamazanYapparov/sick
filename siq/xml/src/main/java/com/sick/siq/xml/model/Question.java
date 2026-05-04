@@ -11,6 +11,7 @@ public class Question {
     private String type;
     private Info info;
     private Params params;
+    private Scenario scenario;
     private Right right;
     private Wrong wrong;
 }

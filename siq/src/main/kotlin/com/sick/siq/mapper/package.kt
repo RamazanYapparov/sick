@@ -8,7 +8,7 @@ import com.sick.siq.xml.model.Theme as XmlTheme
 fun XmlPackage.toDomain() = Package(
     name = name,
     logo = "",
-    tags = tags.tag,
+    tags = tags?.tag ?: emptyList(),
     author = info.authors.author.single(),
     rounds = rounds.round.map { it.toDomain() }
 )
@@ -25,7 +25,6 @@ fun XmlTheme.toDomain() = Theme(
     name = name,
     questions = questions.question.map { it.toDomain() },
 )
-
 
 
 

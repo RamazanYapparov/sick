@@ -48,7 +48,7 @@ class SiqExtractor(private val source: String, private val destination: String) 
                 ?.let {
                     destination.resolve(it).createIfNotExists()
                 }
-            BufferedOutputStream(destination.resolve(name.decode()).outputStream(StandardOpenOption.CREATE_NEW)).use { outputStream ->
+            BufferedOutputStream(destination.resolve(name.decode()).outputStream(StandardOpenOption.CREATE)).use { outputStream ->
                 val bytesIn = ByteArray(BUFFER_SIZE)
                 var read: Int
                 while (inputStream.read(bytesIn).also { read = it } != -1) {

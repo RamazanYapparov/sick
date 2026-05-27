@@ -125,13 +125,15 @@ class GameEnginePlayerSkipTest {
         // Alice and Bob each fail a buzz; Carol remains eligible
         engine.process(PlayerBuzzed(alice.id))
         engine.process(HostRejected)
+        println("DEBUG: after Alice rejected: failedBuzz=${engine.state.failedBuzzPlayerIds}")
         engine.process(PlayerBuzzed(bob.id))
         engine.process(HostRejected)
+        println("DEBUG: after Bob rejected: failedBuzz=${engine.state.failedBuzzPlayerIds}")
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
         assertEquals(setOf(alice.id, bob.id), engine.state.failedBuzzPlayerIds)
 
         val result = engine.process(PlayerSkipped(carol.id))
-
+        println("TEST LINE 136: engine.phase=${engine.phase}")
         assertTrue(result.isRight())
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
         assertTrue(engine.state.skipVotePlayerIds.isEmpty())
@@ -153,5 +155,90 @@ class GameEnginePlayerSkipTest {
         engine.process(QuestionSelected(QUESTION_IDS[0][1]))
 
         assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+    }
+
+    @Test
+    fun `player skips then other answers wrong triggers auto-skip`() {
+        val (engine, alice, bob) = engineWithTwoPlayers()
+        engine.advanceToShowingQuestion(alice.id, QUESTION_IDS[0][0])
+
+        // Alice votes to skip
+        engine.process(PlayerSkipped(alice.id))
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+
+        // Bob buzzes and answers wrong
+        engine.process(PlayerBuzzed(bob.id))
+        assertEquals(GamePhase.PlayerAnswering, engine.phase)
+        engine.process(HostRejected)
+
+        // All players accounted for (Alice skipped, Bob failed) -> auto-skip
+        println("DEBUG phase=${engine.phase}")
+        println("DEBUG failedBuzz=${engine.state.failedBuzzPlayerIds}")
+        println("DEBUG skipVote=${engine.state.skipVotePlayerIds}")
+        println("DEBUG players=${engine.state.players.map { it.id }}")
+        assertEquals(GamePhase.ShowingAnswer, engine.phase)
+        assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+        assertTrue(engine.state.failedBuzzPlayerIds.isEmpty())
+    }
+
+    @Test
+    fun `player answers wrong then other skips triggers auto-skip`() {
+        val (engine, alice, bob) = engineWithTwoPlayers()
+        engine.advanceToShowingQuestion(alice.id, QUESTION_IDS[0][0])
+
+        // Alice answers wrong
+        engine.process(PlayerBuzzed(alice.id))
+        engine.process(HostRejected)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+        assertTrue(alice.id in engine.state.failedBuzzPlayerIds)
+
+        // Bob votes to skip
+        val result = engine.process(PlayerSkipped(bob.id))
+
+        // All players accounted for (Alice failed, Bob skipped) -> auto-skip
+        assertTrue(result.isRight())
+        assertEquals(GamePhase.ShowingAnswer, engine.phase)
+        assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+        assertTrue(engine.state.failedBuzzPlayerIds.isEmpty())
+    }
+
+    @Test
+    fun `player who voted to skip cannot buzz`() {
+        val (engine, alice, _) = engineWithTwoPlayers()
+        engine.advanceToShowingQuestion(alice.id, QUESTION_IDS[0][0])
+
+        // Alice votes to skip
+        engine.process(PlayerSkipped(alice.id))
+        assertTrue(alice.id in engine.state.skipVotePlayerIds)
+
+        // Alice tries to buzz - should be rejected
+        val result = engine.process(PlayerBuzzed(alice.id))
+
+        assertTrue(result.isLeft())
+        assertIs<GameError.InvalidEvent>(result.leftOrNull()!!)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
+    fun `three players all skip or fail triggers auto-skip`() {
+        val (engine, alice, bob, carol) = engineWithThreePlayers()
+        engine.advanceToShowingQuestion(alice.id, QUESTION_IDS[0][0])
+
+        // Alice skips
+        engine.process(PlayerSkipped(alice.id))
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+
+        // Bob answers wrong
+        engine.process(PlayerBuzzed(bob.id))
+        engine.process(HostRejected)
+        assertTrue(bob.id in engine.state.failedBuzzPlayerIds)
+
+        // Carol skips - all accounted for now
+        val result = engine.process(PlayerSkipped(carol.id))
+
+        assertTrue(result.isRight())
+        assertEquals(GamePhase.ShowingAnswer, engine.phase)
+        assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+        assertTrue(engine.state.failedBuzzPlayerIds.isEmpty())
     }
 }

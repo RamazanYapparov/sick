@@ -7,6 +7,8 @@ ktor = "2.3.12"
 [libraries]
 arrow-core = { module = "io.arrow-kt:arrow-core", version = "1.2.4" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version = "5.1.4" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.6" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }

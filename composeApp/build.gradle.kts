@@ -31,6 +31,8 @@ kotlin {
             implementation(project(":core"))
             implementation(project(":siq"))
             implementation(project(":server"))
+            implementation(libs.kotlin.logging)
+            implementation(libs.logback.classic)
 
             val javafxVersion = "21.0.5"
             listOf("win", "linux", "mac").forEach { platform ->

@@ -25,12 +25,26 @@ fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
                 Content.Type.Image -> QuestionDisplayItem.LocalImage(
                     basePath?.resolve("Images")?.resolve(content.ref)?.toString() ?: content.ref
                 )
-                Content.Type.Video -> QuestionDisplayItem.LocalVideo(
-                    basePath?.resolve("Video")?.resolve(content.ref)?.toString() ?: content.ref
-                )
-                Content.Type.Audio -> QuestionDisplayItem.LocalAudio(
-                    basePath?.resolve("Audio")?.resolve(content.ref)?.toString() ?: content.ref
-                )
+                Content.Type.Video -> {
+                    val resolved = basePath?.resolve("Video")?.resolve(content.ref)
+                    if (resolved != null && resolved.toFile().exists()) {
+                        QuestionDisplayItem.LocalVideo(resolved.toFile().absolutePath)
+                    } else if (resolved != null) {
+                        QuestionDisplayItem.Text("Video not found: ${content.ref}")
+                    } else {
+                        QuestionDisplayItem.LocalVideo(content.ref)
+                    }
+                }
+                Content.Type.Audio -> {
+                    val resolved = basePath?.resolve("Audio")?.resolve(content.ref)
+                    if (resolved != null && resolved.toFile().exists()) {
+                        QuestionDisplayItem.LocalAudio(resolved.toFile().absolutePath)
+                    } else if (resolved != null) {
+                        QuestionDisplayItem.Text("Audio not found: ${content.ref}")
+                    } else {
+                        QuestionDisplayItem.LocalAudio(content.ref)
+                    }
+                }
             }
             is Content.Media.FileUrl -> when (content.type) {
                 Content.Type.Image -> QuestionDisplayItem.RemoteImage(content.url)

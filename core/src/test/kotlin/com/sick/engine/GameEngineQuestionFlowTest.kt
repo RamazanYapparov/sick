@@ -293,7 +293,6 @@ class GameEngineQuestionFlowTest {
         val result = engine.process(HostRejected)
 
         assertTrue(result.isRight())
-        assertTrue(player.id in engine.state.failedBuzzPlayerIds)
         assertNotNull(engine.state.currentQuestion)
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
     }

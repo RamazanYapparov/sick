@@ -25,6 +25,7 @@ import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.oshai.kotlinlogging.KotlinLogging
 import javafx.application.Platform as JfxPlatform
 import javafx.embed.swing.JFXPanel
 import javafx.scene.Scene
@@ -32,6 +33,10 @@ import javafx.scene.layout.StackPane
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.scene.media.MediaView
+import java.awt.EventQueue
+import java.util.concurrent.TimeUnit
+
+private val logger = KotlinLogging.logger {}
 
 private fun formatMillis(ms: Double): String {
     val total = (ms / 1000).toInt()
@@ -93,14 +98,27 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
             } catch (e: Exception) {
                 val msg = "Video could not be loaded: ${e.message}"
                 println("VideoPlayer error: $msg")
-                errorMessage = msg
+                EventQueue.invokeLater { errorMessage = msg }
+                return@runLater
+            }
+            val mediaErr = media.error
+            if (mediaErr != null) {
+                val msg = "Video could not be loaded: ${mediaErr.message}"
+                println(msg)
+                EventQueue.invokeLater { errorMessage = msg }
                 return@runLater
             }
             val player = MediaPlayer(media).also { playerRef[0] = it }
             player.setOnError {
                 val msg = "VideoPlayer error: ${player.error?.message}"
                 println(msg)
-                errorMessage = msg
+                EventQueue.invokeLater { errorMessage = msg }
+            }
+            val playerErr = player.error
+            if (playerErr != null) {
+                val msg = "VideoPlayer error: ${playerErr.message}"
+                println(msg)
+                EventQueue.invokeLater { errorMessage = msg }
             }
             player.setOnEndOfMedia { JfxPlatform.runLater { onFinished() } }
             player.currentTimeProperty().addListener { _, _, newTime ->
@@ -124,8 +142,6 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
             player.play()
         }
         onDispose {
-            // Block until disposal completes on the JavaFX thread so the next
-            // setup's runLater cannot start until this player is fully gone.
             val latch = java.util.concurrent.CountDownLatch(1)
             JfxPlatform.runLater {
                 try {
@@ -135,7 +151,10 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
                     latch.countDown()
                 }
             }
-            latch.await()
+            val released = latch.await(5, TimeUnit.SECONDS)
+            if (!released) {
+                logger.error { "VideoPlayer.onDispose: latch timed out after 5s — JavaFX thread may be deadlocked, EDT blocked" }
+            }
         }
     }
 

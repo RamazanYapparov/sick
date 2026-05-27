@@ -5,10 +5,13 @@ import com.sick.engine.GameTimer
 import com.sick.model.Content
 import com.sick.model.Question
 import com.sick.state.GamePhase
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val logger = KotlinLogging.logger {}
 
 class TimerOrchestrator(
     private val timer: GameTimer,
@@ -28,6 +31,7 @@ class TimerOrchestrator(
     private var revealJob: Job? = null
 
     fun onPhaseChange(previous: GamePhase, current: GamePhase, wasPaused: Boolean) {
+        logger.debug { "onPhaseChange: $previous -> $current, wasPaused=$wasPaused, mediaPending=$mediaTimerPending" }
         revealJob?.cancel()
         revealJob = null
 
@@ -60,6 +64,7 @@ class TimerOrchestrator(
 
                 if (previous != GamePhase.ShowingQuestion && state.timerRemaining > 0) {
                     if (state.currentQuestion?.hasMedia() == true) {
+                        logger.info { "onPhaseChange: media pending, timer will start after media finishes" }
                         mediaTimerPending = true
                     } else {
                         mediaTimerPending = false
@@ -75,15 +80,18 @@ class TimerOrchestrator(
     }
 
     fun onMediaFinished() {
+        logger.debug { "onMediaFinished: mediaPending=$mediaTimerPending" }
         if (!mediaTimerPending) return
         mediaTimerPending = false
         val state = engine.state
         if (state.timerRemaining > 0 && engine.phase == GamePhase.ShowingQuestion) {
+            logger.info { "onMediaFinished: starting timer with ${state.timerRemaining}s remaining" }
             timer.start(state.timerRemaining)
         }
     }
 
     fun stop() {
+        logger.debug { "stop: cancelling revealJob and stopping timer" }
         revealJob?.cancel()
         revealJob = null
         mediaTimerPending = false

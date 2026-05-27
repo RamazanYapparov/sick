@@ -25,9 +25,16 @@ import com.sick.event.StartGame
 import com.sick.model.Package
 import com.sick.server.GameServer
 import com.sick.state.GamePhase
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.awt.EventQueue
 import java.nio.file.Path
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 class DesktopSessionController(
     private val scope: CoroutineScope,
@@ -49,6 +56,10 @@ class DesktopSessionController(
     private var showCompleted = false
     private var lastKnownPhase: GamePhase = GamePhase.Lobby
 
+    private var stateChangeCount = 0L
+    private var lastStateChangeMs = 0L
+    private var watchdogJob: Job? = null
+
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
 
@@ -56,9 +67,11 @@ class DesktopSessionController(
         bindEngine(engine)
         server.start()
         publishState()
+        startWatchdog()
     }
 
     fun dispose() {
+        watchdogJob?.cancel()
         timerOrchestrator.stop()
         server.stop()
     }
@@ -157,11 +170,14 @@ class DesktopSessionController(
     private fun process(event: GameEvent) {
         val previousPhase = engine.phase
         val wasTimerPaused = engine.state.isTimerPaused
+        logger.debug { "process: ${event::class.simpleName} from phase=$previousPhase, thread=${Thread.currentThread().name}" }
         engine.process(event).fold(
             ifLeft = { error ->
+                logger.warn { "process: ${event::class.simpleName} rejected: ${error.message}" }
                 setError(error.message)
             },
             ifRight = {
+                logger.debug { "process: ${event::class.simpleName} OK -> ${engine.phase.name}" }
                 timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
                 clearMessages()
                 publishState()
@@ -198,10 +214,12 @@ class DesktopSessionController(
                 extractedBasePath = loaded.extractedBasePath
                 replaceSession(loaded.pack)
                 setInfo("Loaded pack: ${loaded.pack.name}")
+                logger.info { "Loaded pack: ${loaded.pack.name} from $path" }
             }
             .onFailure { error ->
                 error.printStackTrace()
                 setError(error.message ?: "Failed to load pack")
+                logger.error(error) { "Failed to load pack from $path" }
             }
     }
 
@@ -217,6 +235,7 @@ class DesktopSessionController(
         bindEngine(engine)
         server.start()
         publishState()
+        logger.info { "Session replaced with new pack: ${pack.name}" }
     }
 
     private fun bindEngine(target: GameEngine) {
@@ -240,6 +259,11 @@ class DesktopSessionController(
     }
 
     private fun publishState() {
+        stateChangeCount++
+        lastStateChangeMs = System.currentTimeMillis()
+        if (!EventQueue.isDispatchThread()) {
+            logger.warn { "publishState() called from non-EDT thread: ${Thread.currentThread().name} (count=$stateChangeCount)" }
+        }
         uiState = uiState.withEngineSnapshot(
             engine = engine,
             loadedPackPath = loadedPackPath,
@@ -251,6 +275,43 @@ class DesktopSessionController(
             mediaPaused = mediaPaused,
             showCompleted = showCompleted,
         )
+    }
+
+    private fun startWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            while (true) {
+                delay(10_000)
+                val now = System.currentTimeMillis()
+                val elapsed = now - lastStateChangeMs
+                val phaseName = try { engine.phase.name } catch (e: Exception) { "UNKNOWN" }
+                val thread = Thread.currentThread().name
+                if (elapsed > 15_000) {
+                    logger.warn {
+                        "watchdog: engine alive phase=$phaseName, thread=$thread, " +
+                        "lastStateChange=${elapsed}ms ago, stateChanges=$stateChangeCount"
+                    }
+                }
+                if (elapsed > 60_000) {
+                    logger.error {
+                        "watchdog: SUSPECTED FREEZE — no state change for ${elapsed}ms. " +
+                        "Dumping threads:\n${dumpThreads()}"
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dumpThreads(): String {
+        val sb = StringBuilder()
+        val stackTraces = Thread.getAllStackTraces()
+        stackTraces.forEach { (thread, stack) ->
+            sb.append("\n--- ${thread.name} (${thread.state}) ---\n")
+            stack.forEach { element ->
+                sb.append("  at $element\n")
+            }
+        }
+        return sb.toString()
     }
 
     private fun setError(message: String) {

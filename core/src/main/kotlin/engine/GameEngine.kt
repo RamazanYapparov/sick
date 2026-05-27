@@ -9,7 +9,10 @@ import com.sick.event.*
 import com.sick.model.*
 import com.sick.service.*
 import com.sick.state.*
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 sealed class GameError(val message: String) {
     class InvalidEvent(event: GameEvent, phase: GamePhase) :
@@ -21,24 +24,34 @@ sealed class GameError(val message: String) {
 
 class GameEngine(pack: Package) {
 
+    private val lock = Any()
+
     private var _state: GameState = GameState(pack = pack)
-    val state: GameState get() = _state
+    val state: GameState get() = synchronized(lock) { _state }
 
     private var _phase: GamePhase = GamePhase.Lobby
-    val phase: GamePhase get() = _phase
+    val phase: GamePhase get() = synchronized(lock) { _phase }
 
     private val listeners = mutableListOf<(GameState, GamePhase) -> Unit>()
 
     fun addListener(listener: (GameState, GamePhase) -> Unit) {
-        listeners.add(listener)
+        synchronized(lock) { listeners.add(listener) }
     }
 
-    fun process(event: GameEvent): Either<GameError, GameState> {
-        validateEventForPhase(event)?.let { return it.left() }
+    fun process(event: GameEvent): Either<GameError, GameState> = synchronized(lock) {
+        logger.trace { "process: event=${event::class.simpleName}, phase=$_phase, thread=${Thread.currentThread().name}" }
 
-        return applyEvent(event).map { newState ->
+        validateEventForPhase(event)?.let {
+            logger.warn { "process: rejected ${event::class.simpleName} in phase $_phase: ${it.message}" }
+            return@synchronized it.left()
+        }
+
+        return@synchronized applyEvent(event).map { newState ->
+            val oldState = _state
             _state = newState
-            _phase = nextPhase(event)
+            val newPhase = nextPhase(event, oldState)
+            _phase = newPhase
+            logger.debug { "process: ${event::class.simpleName} -> $_phase (${_state.timerRemaining}s)" }
             notifyListeners()
             _state
         }
@@ -113,24 +126,26 @@ class GameEngine(pack: Package) {
 
             is PlayerBuzzed -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
+                ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 _state.copy(answeringPlayerId = event.playerId)
             }
 
             is PlayerSkipped -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
-                val newVotes = _state.skipVotePlayerIds + event.playerId
-                val eligibleIds = _state.players.map { it.id }.toSet() - _state.failedBuzzPlayerIds
-                if (newVotes.containsAll(eligibleIds)) {
+                val newSkipVotes = _state.skipVotePlayerIds + event.playerId
+                val allPlayerIds = _state.players.map { it.id }.toSet()
+                val accountedFor = newSkipVotes + _state.failedBuzzPlayerIds
+                if (accountedFor.containsAll(allPlayerIds)) {
                     _state.copy(
+                        skipVotePlayerIds = emptySet(),
+                        failedBuzzPlayerIds = emptySet(),
                         answeringPlayerId = null,
                         timerRemaining = 0,
                         isTimerPaused = false,
-                        failedBuzzPlayerIds = emptySet(),
-                        skipVotePlayerIds = emptySet(),
                     )
                 } else {
-                    _state.copy(skipVotePlayerIds = newVotes)
+                    _state.copy(skipVotePlayerIds = newSkipVotes)
                 }
             }
 
@@ -169,19 +184,36 @@ class GameEngine(pack: Package) {
             is HostRejected -> {
                 val playerId = ensureNotNull(_state.answeringPlayerId) { GameError.InvalidEvent(event, _phase) }
                 val question  = ensureNotNull(_state.currentQuestion)  { GameError.InvalidEvent(event, _phase) }
-                _state.updatePlayerScore(playerId) { it.subtractScore(question.price) }
-                    .mapLeft { GameError.PlayerError(it) }
-                    .bind()
-                    .copy(
-                        answeringPlayerId = null,
-                        failedBuzzPlayerIds = _state.failedBuzzPlayerIds + playerId,
-                    )
+                val newFailedIds = _state.failedBuzzPlayerIds + playerId
+                val allPlayerIds = _state.players.map { it.id }.toSet()
+                val accountedFor = _state.skipVotePlayerIds + newFailedIds
+                if (accountedFor.containsAll(allPlayerIds)) {
+                    _state.updatePlayerScore(playerId) { it.subtractScore(question.price) }
+                        .mapLeft { GameError.PlayerError(it) }
+                        .bind()
+                        .copy(
+                            answeringPlayerId = null,
+                            skipVotePlayerIds = emptySet(),
+                            failedBuzzPlayerIds = emptySet(),
+                            timerRemaining = 0,
+                            isTimerPaused = false,
+                        )
+                } else {
+                    _state.updatePlayerScore(playerId) { it.subtractScore(question.price) }
+                        .mapLeft { GameError.PlayerError(it) }
+                        .bind()
+                        .copy(
+                            answeringPlayerId = null,
+                            failedBuzzPlayerIds = newFailedIds,
+                        )
+                }
             }
 
             is AnswerShown -> _state.copy(
                 currentQuestion = null,
                 answeringPlayerId = null,
                 failedBuzzPlayerIds = emptySet(),
+                skipVotePlayerIds = emptySet(),
                 timerRemaining = 0,
                 isTimerPaused = false,
             )
@@ -208,19 +240,30 @@ class GameEngine(pack: Package) {
         }
     }
 
-    private fun nextPhase(event: GameEvent): GamePhase = when (event) {
+    private fun nextPhase(event: GameEvent, oldState: GameState): GamePhase = when (event) {
         is StartGame -> GamePhase.ChoosingPlayer
         is SelectActivePlayer -> GamePhase.ChoosingQuestion
         is QuestionSelected -> GamePhase.RevealingQuestion
         is QuestionRevealed -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
-        is PlayerSkipped -> if (_state.skipVotePlayerIds.isEmpty()) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        is PlayerSkipped -> {
+            val allPlayerIds = oldState.players.map { it.id }.toSet()
+            val newSkipVotes = oldState.skipVotePlayerIds + event.playerId
+            val accountedFor = newSkipVotes + oldState.failedBuzzPlayerIds
+            if (accountedFor.containsAll(allPlayerIds)) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        }
         is PauseTimer, is ResumeTimer -> _phase
         is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer
         is SkipQuestion -> GamePhase.ShowingAnswer
         is HostAccepted -> GamePhase.ShowingAnswer
-        is HostRejected -> if (_state.players.all { it.id in _state.failedBuzzPlayerIds })
-            GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        is HostRejected -> {
+            val playerId = oldState.answeringPlayerId
+            val newFailedIds = if (playerId != null) oldState.failedBuzzPlayerIds + playerId else oldState.failedBuzzPlayerIds
+            val allAccounted = oldState.players.all { player ->
+                player.id in newFailedIds || player.id in oldState.skipVotePlayerIds
+            }
+            if (allAccounted) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+        }
         is SkipRound -> GamePhase.RoundEnd
         is AnswerShown -> when {
             _state.isGameOver -> GamePhase.GameOver

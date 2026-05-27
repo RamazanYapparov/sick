@@ -1,0 +1,118 @@
+01:54:26.049 [Test worker] TRACE GameEngine - process: event=PlayerJoined, phase=Lobby, thread=Test worker
+01:54:26.055 [Test worker] DEBUG GameEngine - process: PlayerJoined -> Lobby (0s)
+01:54:26.055 [Test worker] TRACE GameEngine - process: event=StartGame, phase=Lobby, thread=Test worker
+01:54:26.056 [Test worker] DEBUG GameEngine - process: StartGame -> ChoosingPlayer (0s)
+01:54:26.056 [Test worker] TRACE GameEngine - process: event=SelectActivePlayer, phase=ChoosingPlayer, thread=Test worker
+01:54:26.056 [Test worker] DEBUG GameEngine - process: SelectActivePlayer -> ChoosingQuestion (0s)
+01:54:26.056 [Test worker] TRACE GameEngine - process: event=QuestionSelected, phase=ChoosingQuestion, thread=Test worker
+01:54:26.056 [Test worker] DEBUG GameEngine - process: QuestionSelected -> RevealingQuestion (30s)
+02:18:03.642 [DefaultDispatcher-worker-1] INFO  application - Autoreload is disabled because the development mode is off.
+02:18:03.657 [DefaultDispatcher-worker-1] INFO  application - Application started in 0.02 seconds.
+02:18:03.675 [DefaultDispatcher-worker-2] INFO  application - Responding at http://0.0.0.0:8080
+02:18:19.029 [DefaultDispatcher-worker-2] INFO  application - Autoreload is disabled because the development mode is off.
+02:18:19.030 [DefaultDispatcher-worker-2] INFO  application - Application started in 0.001 seconds.
+02:18:19.030 [DefaultDispatcher-worker-3] INFO  application - Responding at http://0.0.0.0:8080
+02:18:19.031 [AWT-EventQueue-0] INFO  DesktopSessionController - Session replaced with new pack: Для вас 4
+02:18:19.031 [AWT-EventQueue-0] INFO  DesktopSessionController - Loaded pack: Для вас 4 from /home/ramazan/Downloads/nealexsey.siq
+02:18:30.410 [DefaultDispatcher-worker-6] INFO  application - Autoreload is disabled because the development mode is off.
+02:18:30.410 [DefaultDispatcher-worker-6] INFO  application - Application started in 0.0 seconds.
+02:18:30.410 [DefaultDispatcher-worker-5] INFO  application - Responding at http://0.0.0.0:8080
+02:18:30.411 [AWT-EventQueue-0] INFO  DesktopSessionController - Session replaced with new pack: FakePaket5 Great CUMback
+02:18:30.411 [AWT-EventQueue-0] INFO  DesktopSessionController - Loaded pack: FakePaket5 Great CUMback from /home/ramazan/Downloads/FakePaket5_Great_CUMback.siq
+02:18:39.139 [DefaultDispatcher-worker-5] INFO  application - Autoreload is disabled because the development mode is off.
+02:18:39.139 [DefaultDispatcher-worker-5] INFO  application - Application started in 0.0 seconds.
+02:18:39.140 [DefaultDispatcher-worker-2] INFO  application - Responding at http://0.0.0.0:8080
+02:18:39.140 [AWT-EventQueue-0] INFO  DesktopSessionController - Session replaced with new pack: Для вас 4
+02:18:39.140 [AWT-EventQueue-0] INFO  DesktopSessionController - Loaded pack: Для вас 4 from /home/ramazan/Downloads/nealexsey.siq
+02:18:47.855 [DefaultDispatcher-worker-1] INFO  JoinRoute - /join name=у
+02:18:47.855 [DefaultDispatcher-worker-1] TRACE GameEngine - process: event=PlayerJoined, phase=Lobby, thread=DefaultDispatcher-worker-1
+02:18:47.858 [DefaultDispatcher-worker-1] DEBUG GameEngine - process: PlayerJoined -> Lobby (0s)
+02:18:47.859 [DefaultDispatcher-worker-1] WARN  DesktopSessionController - publishState() called from non-EDT thread: DefaultDispatcher-worker-1 (count=5)
+02:18:47.860 [DefaultDispatcher-worker-1] INFO  JoinRoute - /join name=у -> playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:10.421 [AWT-EventQueue-0] WARN  DesktopSessionController - watchdog: engine alive phase=Lobby, thread=AWT-EventQueue-0, lastStateChange=22560ms ago, stateChanges=5
+02:19:12.115 [AWT-EventQueue-0] TRACE GameEngine - process: event=StartGame, phase=Lobby, thread=AWT-EventQueue-0
+02:19:12.115 [AWT-EventQueue-0] DEBUG GameEngine - process: StartGame -> ChoosingPlayer (0s)
+02:19:12.116 [AWT-EventQueue-0] TRACE GameEngine - process: event=SelectActivePlayer, phase=ChoosingPlayer, thread=AWT-EventQueue-0
+02:19:12.116 [AWT-EventQueue-0] DEBUG GameEngine - process: SelectActivePlayer -> ChoosingQuestion (0s)
+02:19:30.421 [AWT-EventQueue-0] WARN  DesktopSessionController - watchdog: engine alive phase=ChoosingQuestion, thread=AWT-EventQueue-0, lastStateChange=18305ms ago, stateChanges=9
+02:19:30.947 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionSelected, phase=ChoosingQuestion, thread=AWT-EventQueue-0
+02:19:30.947 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionSelected -> RevealingQuestion (30s)
+02:19:32.370 [DefaultDispatcher-worker-2] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:32.371 [DefaultDispatcher-worker-2] TRACE GameEngine - process: event=PlayerBuzzed, phase=RevealingQuestion, thread=DefaultDispatcher-worker-2
+02:19:32.371 [DefaultDispatcher-worker-2] WARN  GameEngine - process: rejected PlayerBuzzed in phase RevealingQuestion: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:32.371 [DefaultDispatcher-worker-2] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.298 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:33.298 [DefaultDispatcher-worker-3] TRACE GameEngine - process: event=PlayerBuzzed, phase=RevealingQuestion, thread=DefaultDispatcher-worker-3
+02:19:33.298 [DefaultDispatcher-worker-3] WARN  GameEngine - process: rejected PlayerBuzzed in phase RevealingQuestion: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.298 [DefaultDispatcher-worker-3] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.512 [DefaultDispatcher-worker-5] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:33.512 [DefaultDispatcher-worker-5] TRACE GameEngine - process: event=PlayerBuzzed, phase=RevealingQuestion, thread=DefaultDispatcher-worker-5
+02:19:33.512 [DefaultDispatcher-worker-5] WARN  GameEngine - process: rejected PlayerBuzzed in phase RevealingQuestion: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.512 [DefaultDispatcher-worker-5] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.712 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:33.712 [DefaultDispatcher-worker-3] TRACE GameEngine - process: event=PlayerBuzzed, phase=RevealingQuestion, thread=DefaultDispatcher-worker-3
+02:19:33.712 [DefaultDispatcher-worker-3] WARN  GameEngine - process: rejected PlayerBuzzed in phase RevealingQuestion: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.712 [DefaultDispatcher-worker-3] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.919 [DefaultDispatcher-worker-5] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:33.919 [DefaultDispatcher-worker-5] TRACE GameEngine - process: event=PlayerBuzzed, phase=RevealingQuestion, thread=DefaultDispatcher-worker-5
+02:19:33.919 [DefaultDispatcher-worker-5] WARN  GameEngine - process: rejected PlayerBuzzed in phase RevealingQuestion: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.919 [DefaultDispatcher-worker-5] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase RevealingQuestion
+02:19:33.964 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionRevealed, phase=RevealingQuestion, thread=AWT-EventQueue-0
+02:19:33.964 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionRevealed -> ShowingQuestion (30s)
+02:19:33.965 [AWT-EventQueue-0] INFO  TimerOrchestrator - onPhaseChange: media pending, timer will start after media finishes
+02:19:34.429 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:34.429 [DefaultDispatcher-worker-3] TRACE GameEngine - process: event=PlayerBuzzed, phase=ShowingQuestion, thread=DefaultDispatcher-worker-3
+02:19:34.429 [DefaultDispatcher-worker-3] DEBUG GameEngine - process: PlayerBuzzed -> PlayerAnswering (30s)
+02:19:34.429 [DefaultDispatcher-worker-3] WARN  DesktopSessionController - publishState() called from non-EDT thread: DefaultDispatcher-worker-3 (count=14)
+02:19:34.430 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc OK
+02:19:34.611 [DefaultDispatcher-worker-4] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:34.611 [DefaultDispatcher-worker-4] TRACE GameEngine - process: event=PlayerBuzzed, phase=PlayerAnswering, thread=DefaultDispatcher-worker-4
+02:19:34.611 [DefaultDispatcher-worker-4] WARN  GameEngine - process: rejected PlayerBuzzed in phase PlayerAnswering: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:34.611 [DefaultDispatcher-worker-4] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:34.787 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:34.787 [DefaultDispatcher-worker-3] TRACE GameEngine - process: event=PlayerBuzzed, phase=PlayerAnswering, thread=DefaultDispatcher-worker-3
+02:19:34.787 [DefaultDispatcher-worker-3] WARN  GameEngine - process: rejected PlayerBuzzed in phase PlayerAnswering: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:34.787 [DefaultDispatcher-worker-3] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:36.229 [AWT-EventQueue-0] TRACE GameEngine - process: event=HostAccepted, phase=PlayerAnswering, thread=AWT-EventQueue-0
+02:19:36.229 [AWT-EventQueue-0] DEBUG GameEngine - process: HostAccepted -> ShowingAnswer (30s)
+02:19:41.252 [AWT-EventQueue-0] ERROR VideoPlayer - VideoPlayer.onDispose: latch timed out after 5s — JavaFX thread may be deadlocked, EDT blocked
+02:19:41.261 [AWT-EventQueue-0] TRACE GameEngine - process: event=AnswerShown, phase=ShowingAnswer, thread=AWT-EventQueue-0
+02:19:41.262 [AWT-EventQueue-0] DEBUG GameEngine - process: AnswerShown -> ChoosingQuestion (0s)
+02:19:43.379 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionSelected, phase=ChoosingQuestion, thread=AWT-EventQueue-0
+02:19:43.379 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionSelected -> RevealingQuestion (30s)
+02:19:46.379 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionRevealed, phase=RevealingQuestion, thread=AWT-EventQueue-0
+02:19:46.380 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionRevealed -> ShowingQuestion (30s)
+02:19:46.380 [AWT-EventQueue-0] INFO  TimerOrchestrator - onPhaseChange: media pending, timer will start after media finishes
+02:19:47.215 [DefaultDispatcher-worker-4] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:47.215 [DefaultDispatcher-worker-4] TRACE GameEngine - process: event=PlayerBuzzed, phase=ShowingQuestion, thread=DefaultDispatcher-worker-4
+02:19:47.215 [DefaultDispatcher-worker-4] DEBUG GameEngine - process: PlayerBuzzed -> PlayerAnswering (30s)
+02:19:47.215 [DefaultDispatcher-worker-4] WARN  DesktopSessionController - publishState() called from non-EDT thread: DefaultDispatcher-worker-4 (count=23)
+02:19:47.215 [DefaultDispatcher-worker-4] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc OK
+02:19:47.421 [DefaultDispatcher-worker-5] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:19:47.421 [DefaultDispatcher-worker-5] TRACE GameEngine - process: event=PlayerBuzzed, phase=PlayerAnswering, thread=DefaultDispatcher-worker-5
+02:19:47.421 [DefaultDispatcher-worker-5] WARN  GameEngine - process: rejected PlayerBuzzed in phase PlayerAnswering: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:47.421 [DefaultDispatcher-worker-5] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase PlayerAnswering
+02:19:55.297 [AWT-EventQueue-0] TRACE GameEngine - process: event=HostAccepted, phase=PlayerAnswering, thread=AWT-EventQueue-0
+02:19:55.297 [AWT-EventQueue-0] DEBUG GameEngine - process: HostAccepted -> ShowingAnswer (30s)
+02:20:00.319 [AWT-EventQueue-0] ERROR VideoPlayer - VideoPlayer.onDispose: latch timed out after 5s — JavaFX thread may be deadlocked, EDT blocked
+02:20:00.326 [AWT-EventQueue-0] TRACE GameEngine - process: event=AnswerShown, phase=ShowingAnswer, thread=AWT-EventQueue-0
+02:20:00.326 [AWT-EventQueue-0] DEBUG GameEngine - process: AnswerShown -> ChoosingQuestion (0s)
+02:20:04.332 [DefaultDispatcher-worker-4] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:20:04.332 [DefaultDispatcher-worker-4] TRACE GameEngine - process: event=PlayerBuzzed, phase=ChoosingQuestion, thread=DefaultDispatcher-worker-4
+02:20:04.332 [DefaultDispatcher-worker-4] WARN  GameEngine - process: rejected PlayerBuzzed in phase ChoosingQuestion: Cannot process PlayerBuzzed in phase ChoosingQuestion
+02:20:04.332 [DefaultDispatcher-worker-4] WARN  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc rejected: Cannot process PlayerBuzzed in phase ChoosingQuestion
+02:20:06.197 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionSelected, phase=ChoosingQuestion, thread=AWT-EventQueue-0
+02:20:06.197 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionSelected -> RevealingQuestion (30s)
+02:20:09.208 [AWT-EventQueue-0] TRACE GameEngine - process: event=QuestionRevealed, phase=RevealingQuestion, thread=AWT-EventQueue-0
+02:20:09.208 [AWT-EventQueue-0] DEBUG GameEngine - process: QuestionRevealed -> ShowingQuestion (30s)
+02:20:09.209 [AWT-EventQueue-0] INFO  TimerOrchestrator - onPhaseChange: media pending, timer will start after media finishes
+02:20:10.137 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc
+02:20:10.137 [DefaultDispatcher-worker-3] TRACE GameEngine - process: event=PlayerBuzzed, phase=ShowingQuestion, thread=DefaultDispatcher-worker-3
+02:20:10.137 [DefaultDispatcher-worker-3] DEBUG GameEngine - process: PlayerBuzzed -> PlayerAnswering (30s)
+02:20:10.137 [DefaultDispatcher-worker-3] WARN  DesktopSessionController - publishState() called from non-EDT thread: DefaultDispatcher-worker-3 (count=32)
+02:20:10.137 [DefaultDispatcher-worker-3] INFO  BuzzRoute - /buzz playerId=64c2bf87-774e-41f5-a5f7-56cd4f2471dc OK
+02:20:12.136 [AWT-EventQueue-0] TRACE GameEngine - process: event=HostAccepted, phase=PlayerAnswering, thread=AWT-EventQueue-0
+02:20:12.136 [AWT-EventQueue-0] DEBUG GameEngine - process: HostAccepted -> ShowingAnswer (30s)
+02:20:17.163 [AWT-EventQueue-0] ERROR VideoPlayer - VideoPlayer.onDispose: latch timed out after 5s — JavaFX thread may be deadlocked, EDT blocked
+02:20:17.171 [AWT-EventQueue-0] TRACE GameEngine - process: event=AnswerShown, phase=ShowingAnswer, thread=AWT-EventQueue-0
+02:20:17.171 [AWT-EventQueue-0] DEBUG GameEngine - process: AnswerShown -> ChoosingQuestion (0s)

@@ -10,7 +10,7 @@ fun XmlPackage.toDomain() = Package(
     logo = "",
     tags = tags?.tag ?: emptyList(),
     author = info.authors.author.single(),
-    rounds = rounds.round.map { it.toDomain() }
+    rounds = rounds?.round?.map { it.toDomain() } ?: emptyList()
 )
 
 fun XmlRound.toRoundType() = if(type == "final") RoundType.Final else RoundType.Simple
@@ -18,12 +18,12 @@ fun XmlRound.toRoundType() = if(type == "final") RoundType.Final else RoundType.
 fun XmlRound.toDomain() = Round(
     name = name,
     type = toRoundType(),
-    themes = themes.theme.map { it.toDomain() }
+    themes = themes?.theme?.map { it.toDomain() } ?: emptyList()
 )
 
 fun XmlTheme.toDomain() = Theme(
     name = name,
-    questions = questions.question.map { it.toDomain() },
+    questions = questions?.question?.map { it.toDomain() } ?: emptyList(),
 )
 
 

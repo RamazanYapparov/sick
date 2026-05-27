@@ -2,6 +2,7 @@ package app.ui.window
 
 import app.ui.components.PlayerCards
 import app.ui.components.QuestionBoard
+import app.ui.components.QrCode
 import app.ui.theme.Palette
 import app.ui.media.AudioPlayer
 import app.ui.media.VideoPlayer
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -67,11 +70,98 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
                     CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
+                state.phase == GamePhase.Lobby && state.hasPack ->
+                    LobbyPanel(state, compact)
                 else ->
                     BoardOverview(state, compact)
             }
             }
             PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, compact)
+        }
+    }
+}
+
+@Composable
+private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxSize(),
+        backgroundColor = Palette.DarkSurface,
+        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(if (compact) 16.dp else 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 32.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1.2f),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 16.dp)
+            ) {
+                Text(
+                    text = "Pack Loaded",
+                    fontSize = if (compact) 12.sp else 16.sp,
+                    color = Palette.AccentGold,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = state.packName,
+                    fontSize = if (compact) 18.sp else 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                
+                Spacer(modifier = Modifier.height(if (compact) 4.dp else 12.dp))
+                
+                Text(
+                    text = "Connect to Play",
+                    fontSize = if (compact) 14.sp else 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                
+                Text(
+                    text = "Scan the QR code or enter the connection URL in your browser to join as a player.",
+                    fontSize = if (compact) 11.sp else 16.sp,
+                    color = Color(0xFFB0C4DE)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0E1A21), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = state.serverUrl,
+                        fontSize = if (compact) 12.sp else 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Palette.AccentGold
+                    )
+                }
+            }
+            
+            Box(
+                modifier = Modifier
+                    .weight(0.8f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    backgroundColor = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = 8.dp,
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .padding(if (compact) 8.dp else 16.dp)
+                ) {
+                    QrCode(
+                        text = state.serverUrl,
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        fgColor = Color(0xFF0E1A21),
+                        bgColor = Color.White
+                    )
+                }
+            }
         }
     }
 }

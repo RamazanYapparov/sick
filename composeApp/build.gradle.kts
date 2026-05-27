@@ -33,6 +33,7 @@ kotlin {
             implementation(project(":server"))
             implementation(libs.kotlin.logging)
             implementation(libs.logback.classic)
+            implementation(libs.zxing.core)
 
             val javafxVersion = "21.0.5"
             listOf("win", "linux", "mac").forEach { platform ->

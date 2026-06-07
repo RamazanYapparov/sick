@@ -54,6 +54,7 @@ sealed interface Answer {
     data class Simple(
         val right: List<String>,
         val wrong: List<String>,
+        val contents: List<Content> = emptyList(),
     ) : Answer
 
     data class Select(

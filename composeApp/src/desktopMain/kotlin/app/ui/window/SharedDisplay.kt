@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sick.model.Answer
 import com.sick.state.GamePhase
+import java.nio.file.Path
 
 @Composable
 internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMediaFinished: () -> Unit = {}) {
@@ -65,7 +66,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
             Box(modifier = Modifier.weight(1f)) {
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(state.currentQuestion.answer, compact, bodySize)
+                    AnswerPanel(state.currentQuestion.answer, state.extractedBasePath, compact, bodySize)
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
@@ -217,7 +218,111 @@ private fun RevealingQuestionPlaceholder(state: DesktopUiState, compact: Boolean
 }
 
 @Composable
-private fun AnswerPanel(answer: Answer, compact: Boolean, bodySize: TextUnit) {
+private fun RenderQuestionDisplayItem(
+    item: QuestionDisplayItem,
+    compact: Boolean,
+    bodySize: TextUnit,
+    onMediaFinished: () -> Unit = {},
+    mediaStopSignal: Int = 0,
+    mediaPaused: Boolean = false,
+) {
+    when (item) {
+        is QuestionDisplayItem.Text ->
+            Text(item.text, fontSize = bodySize, color = Color.White)
+        is QuestionDisplayItem.LocalImage -> {
+            val bitmap = remember(item.absolutePath) {
+                runCatching {
+                    java.io.File(item.absolutePath).inputStream().buffered()
+                        .use(::loadImageBitmap)
+                }.getOrNull()
+            }
+            if (bitmap != null)
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.Fit,
+                )
+            else
+                Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
+        }
+        is QuestionDisplayItem.RemoteImage -> {
+            val bitmap = remember(item.url) {
+                runCatching {
+                    item.url.openStream().buffered().use(::loadImageBitmap)
+                }.getOrNull()
+            }
+            if (bitmap != null)
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.Fit,
+                )
+            else
+                Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
+        }
+        is QuestionDisplayItem.LocalVideo -> {
+            if (compact) {
+                Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
+            } else {
+                val uri = remember(item.absolutePath) {
+                    java.io.File(item.absolutePath).toURI().toString()
+                }
+                VideoPlayer(
+                    uri = uri,
+                    modifier = Modifier.fillMaxWidth().height(360.dp),
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    onFinished = onMediaFinished,
+                )
+            }
+        }
+        is QuestionDisplayItem.RemoteVideo -> {
+            if (compact) {
+                Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
+            } else {
+                VideoPlayer(
+                    uri = item.url.toString(),
+                    modifier = Modifier.fillMaxWidth().height(360.dp),
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    onFinished = onMediaFinished,
+                )
+            }
+        }
+        is QuestionDisplayItem.LocalAudio -> {
+            if (compact) {
+                Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
+            } else {
+                val uri = remember(item.absolutePath) {
+                    java.io.File(item.absolutePath).toURI().toString()
+                }
+                AudioPlayer(
+                    uri = uri,
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    onFinished = onMediaFinished,
+                )
+            }
+        }
+        is QuestionDisplayItem.RemoteAudio -> {
+            if (compact) {
+                Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
+            } else {
+                AudioPlayer(
+                    uri = item.url.toString(),
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    onFinished = onMediaFinished,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodySize: TextUnit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = Palette.DarkSurface,
@@ -244,6 +349,13 @@ private fun AnswerPanel(answer: Answer, compact: Boolean, bodySize: TextUnit) {
                         Text("Also accepted:", fontSize = bodySize, color = Color.White)
                         answer.wrong.forEach { wrong ->
                             Text(wrong, fontSize = bodySize, color = Color(0xFFAAAAAA))
+                        }
+                    }
+                    if (answer.contents.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Divider(color = Color(0x335F7D8D))
+                        displayContents(answer.contents, basePath).forEach { item ->
+                            RenderQuestionDisplayItem(item = item, compact = compact, bodySize = bodySize)
                         }
                     }
                 }
@@ -301,99 +413,14 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
             Divider(color = Color(0x335F7D8D))
 
             question.displayContents(state.extractedBasePath).forEach { item ->
-                when (item) {
-                    is QuestionDisplayItem.Text ->
-                        Text(item.text, fontSize = bodySize, color = Color.White)
-                    is QuestionDisplayItem.LocalImage -> {
-                        val bitmap = remember(item.absolutePath) {
-                            runCatching {
-                                java.io.File(item.absolutePath).inputStream().buffered()
-                                    .use(::loadImageBitmap)
-                            }.getOrNull()
-                        }
-                        if (bitmap != null)
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxWidth(),
-                                contentScale = ContentScale.Fit,
-                            )
-                        else
-                            Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
-                    }
-                    is QuestionDisplayItem.RemoteImage -> {
-                        val bitmap = remember(item.url) {
-                            runCatching {
-                                item.url.openStream().buffered().use(::loadImageBitmap)
-                            }.getOrNull()
-                        }
-                        if (bitmap != null)
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxWidth(),
-                                contentScale = ContentScale.Fit,
-                            )
-                        else
-                            Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
-                    }
-                    is QuestionDisplayItem.LocalVideo -> {
-                        if (compact) {
-                            Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
-                        } else {
-                            val uri = remember(item.absolutePath) {
-                                java.io.File(item.absolutePath).toURI().toString()
-                            }
-                            VideoPlayer(
-                                uri = uri,
-                                modifier = Modifier.fillMaxWidth().height(360.dp),
-                                stopSignal = state.mediaStopSignal,
-                                paused = state.mediaPaused,
-                                onFinished = onMediaFinished,
-                            )
-                        }
-                    }
-                    is QuestionDisplayItem.RemoteVideo -> {
-                        if (compact) {
-                            Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
-                        } else {
-                            VideoPlayer(
-                                uri = item.url.toString(),
-                                modifier = Modifier.fillMaxWidth().height(360.dp),
-                                stopSignal = state.mediaStopSignal,
-                                paused = state.mediaPaused,
-                                onFinished = onMediaFinished,
-                            )
-                        }
-                    }
-                    is QuestionDisplayItem.LocalAudio -> {
-                        if (compact) {
-                            Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
-                        } else {
-                            val uri = remember(item.absolutePath) {
-                                java.io.File(item.absolutePath).toURI().toString()
-                            }
-                            AudioPlayer(
-                                uri = uri,
-                                stopSignal = state.mediaStopSignal,
-                                paused = state.mediaPaused,
-                                onFinished = onMediaFinished,
-                            )
-                        }
-                    }
-                    is QuestionDisplayItem.RemoteAudio -> {
-                        if (compact) {
-                            Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
-                        } else {
-                            AudioPlayer(
-                                uri = item.url.toString(),
-                                stopSignal = state.mediaStopSignal,
-                                paused = state.mediaPaused,
-                                onFinished = onMediaFinished,
-                            )
-                        }
-                    }
-                }
+                RenderQuestionDisplayItem(
+                    item = item,
+                    compact = compact,
+                    bodySize = bodySize,
+                    onMediaFinished = onMediaFinished,
+                    mediaStopSignal = state.mediaStopSignal,
+                    mediaPaused = state.mediaPaused,
+                )
             }
         }
     }

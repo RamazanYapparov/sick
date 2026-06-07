@@ -15,7 +15,7 @@ sealed interface QuestionDisplayItem {
     data class RemoteAudio(val url: URL) : QuestionDisplayItem
 }
 
-fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
+fun displayContents(contents: List<Content>, basePath: Path?): List<QuestionDisplayItem> =
     contents
         .sortedWith { item, _ -> if (item is Content.Text) -1 else 1 }
         .map { content ->
@@ -53,3 +53,5 @@ fun Question<*>.displayContents(basePath: Path?): List<QuestionDisplayItem> =
             }
         }
     }
+
+fun Question<*>.displayContents(basePath: Path?) = displayContents(contents, basePath)

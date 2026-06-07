@@ -22,6 +22,8 @@ import com.sick.event.SelectActivePlayer
 import com.sick.event.SkipQuestion
 import com.sick.event.SkipRound
 import com.sick.event.StartGame
+import com.sick.model.Answer
+import com.sick.model.Content
 import com.sick.model.Package
 import com.sick.server.GameServer
 import com.sick.state.GamePhase
@@ -215,12 +217,42 @@ class DesktopSessionController(
                 replaceSession(loaded.pack)
                 setInfo("Loaded pack: ${loaded.pack.name}")
                 logger.info { "Loaded pack: ${loaded.pack.name} from $path" }
+                logPackContents(loaded.pack)
             }
             .onFailure { error ->
                 error.printStackTrace()
                 setError(error.message ?: "Failed to load pack")
                 logger.error(error) { "Failed to load pack from $path" }
             }
+    }
+
+    private fun logPackContents(pack: Package) {
+        logger.info { "=== Pack: ${pack.name} ===" }
+        logger.info { "Author: ${pack.author} | Logo: ${pack.logo} | Tags: ${pack.tags}" }
+        pack.rounds.forEachIndexed { ri, round ->
+            logger.info { "  Round ${ri + 1}: \"${round.name}\" (${round.type})" }
+            round.themes.forEachIndexed { ti, theme ->
+                logger.info { "    Theme ${ti + 1}: \"${theme.name}\" — ${theme.questions.size} questions" }
+                theme.questions.forEach { q ->
+                    val contentSummary = q.contents.joinToString(", ") {
+                        when (it) {
+                            is Content.Text -> "Text"
+                            is Content.Media.FileRef -> "${it.type}(${it.ref})"
+                            is Content.Media.FileUrl -> "${it.type}(${it.url})"
+                        }
+                    }
+                    val answerSummary = when (val a = q.answer) {
+                        is Answer.Simple -> {
+                            val c = if (a.contents.isNotEmpty()) " | Contents: ${a.contents.size}" else ""
+                            "Simple(right=${a.right}, wrong=${a.wrong}$c)"
+                        }
+                        is Answer.Select -> "Select(options=${a.options.map { "${it.name}=${it.answer}" }})"
+                    }
+                    logger.info { "      [${q.price}] ${q.type::class.simpleName} | Content: $contentSummary | Answer: $answerSummary" }
+                }
+            }
+        }
+        logger.info { "=== End Pack ===" }
     }
 
     private fun replaceSession(pack: Package) {

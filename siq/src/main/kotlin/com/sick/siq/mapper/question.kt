@@ -45,6 +45,7 @@ fun XmlQuestion.toAnswer() = if (findParamByName("answerType")?.value == "select
     Answer.Simple(
         right = right.answer,
         wrong = wrong?.answer.orEmpty(),
+        contents = findParamByName("answer")?.item.orEmpty().mapNotNull { it.toContentOrNull() },
     )
 }
 

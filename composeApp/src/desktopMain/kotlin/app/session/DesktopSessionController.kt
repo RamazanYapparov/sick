@@ -264,6 +264,7 @@ class DesktopSessionController(
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
         timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
         mediaPaused = false
+        mediaStopSignal = 0
         bindEngine(engine)
         server.start()
         publishState()
@@ -284,6 +285,10 @@ class DesktopSessionController(
                 previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingAnswer -> {
                     mediaPaused = false
                     mediaStopSignal++
+                }
+                newPhase == GamePhase.ChoosingQuestion -> {
+                    mediaStopSignal = 0
+                    mediaPaused = false
                 }
             }
             publishState()

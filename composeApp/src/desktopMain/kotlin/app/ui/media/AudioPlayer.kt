@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import javafx.application.Platform as JfxPlatform
-import javafx.embed.swing.JFXPanel
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 
@@ -36,29 +35,19 @@ private fun formatMillis(ms: Double): String {
     return "$min:${sec.toString().padStart(2, '0')}"
 }
 
-private object AudioJavaFxInit {
-    @Volatile private var started = false
-
-    fun ensureStarted() {
-        if (started) return
-        synchronized(this) {
-            if (started) return
-            try { JfxPlatform.startup {} } catch (_: IllegalStateException) {}
-            started = true
-        }
-    }
-}
-
 @Composable
 fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0, paused: Boolean = false, onFinished: () -> Unit = {}) {
     val playerRef = remember { arrayOfNulls<MediaPlayer>(1) }
+    val lastStopSignal = remember { mutableStateOf(stopSignal) }
     var playing by remember { mutableStateOf(true) }
     var progress by remember { mutableStateOf(0f) }
     var currentMs by remember { mutableStateOf(0.0) }
     var totalMs by remember { mutableStateOf(0.0) }
 
     LaunchedEffect(stopSignal) {
-        if (stopSignal > 0) {
+        val prev = lastStopSignal.value
+        lastStopSignal.value = stopSignal
+        if (stopSignal > prev) {
             playing = false
             JfxPlatform.runLater { playerRef[0]?.stop() }
         }
@@ -81,10 +70,7 @@ fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     }
 
     DisposableEffect(uri) {
-        AudioJavaFxInit.ensureStarted()
-        // JFXPanel must be instantiated to keep the JavaFX toolkit alive for audio-only playback
-        @Suppress("UNUSED_VARIABLE")
-        val panel = JFXPanel()
+        JfxInit.ensureStarted()
         JfxPlatform.runLater {
             val media = runCatching { Media(uri) }.getOrElse { return@runLater }
             val player = MediaPlayer(media).also { playerRef[0] = it }
@@ -106,7 +92,10 @@ fun AudioPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
             player.play()
         }
         onDispose {
-            JfxPlatform.runLater { playerRef[0]?.dispose(); playerRef[0] = null }
+            JfxPlatform.runLater {
+                playerRef[0]?.dispose()
+                playerRef[0] = null
+            }
         }
     }
 

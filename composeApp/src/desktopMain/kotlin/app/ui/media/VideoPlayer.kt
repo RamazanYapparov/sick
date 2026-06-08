@@ -25,7 +25,6 @@ import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.oshai.kotlinlogging.KotlinLogging
 import javafx.application.Platform as JfxPlatform
 import javafx.embed.swing.JFXPanel
 import javafx.scene.Scene
@@ -34,28 +33,12 @@ import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.scene.media.MediaView
 import java.awt.EventQueue
-import java.util.concurrent.TimeUnit
-
-private val logger = KotlinLogging.logger {}
 
 private fun formatMillis(ms: Double): String {
     val total = (ms / 1000).toInt()
     val min = total / 60
     val sec = total % 60
     return "$min:${sec.toString().padStart(2, '0')}"
-}
-
-private object JavaFxInit {
-    @Volatile private var started = false
-
-    fun ensureStarted() {
-        if (started) return
-        synchronized(this) {
-            if (started) return
-            try { JfxPlatform.startup {} } catch (_: IllegalStateException) {}
-            started = true
-        }
-    }
 }
 
 @Composable
@@ -65,10 +48,13 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
     var progress by remember { mutableStateOf(0f) }
     var currentMs by remember { mutableStateOf(0.0) }
     var totalMs by remember { mutableStateOf(0.0) }
+    val lastStopSignal = remember { mutableStateOf(stopSignal) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(stopSignal) {
-        if (stopSignal > 0) {
+        val prev = lastStopSignal.value
+        lastStopSignal.value = stopSignal
+        if (stopSignal > prev) {
             JfxPlatform.runLater { playerRef[0]?.stop() }
         }
     }
@@ -91,7 +77,7 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
 
     DisposableEffect(uri) {
         errorMessage = null
-        JavaFxInit.ensureStarted()
+        JfxInit.ensureStarted()
         JfxPlatform.runLater {
             val media = try {
                 Media(uri)
@@ -142,18 +128,9 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, stopSignal: Int = 0,
             player.play()
         }
         onDispose {
-            val latch = java.util.concurrent.CountDownLatch(1)
             JfxPlatform.runLater {
-                try {
-                    playerRef[0]?.dispose()
-                    playerRef[0] = null
-                } finally {
-                    latch.countDown()
-                }
-            }
-            val released = latch.await(5, TimeUnit.SECONDS)
-            if (!released) {
-                logger.error { "VideoPlayer.onDispose: latch timed out after 5s — JavaFX thread may be deadlocked, EDT blocked" }
+                playerRef[0]?.dispose()
+                playerRef[0] = null
             }
         }
     }

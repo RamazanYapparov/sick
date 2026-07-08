@@ -9,6 +9,8 @@ import com.sick.engine.GameEngine
 import com.sick.engine.GameTimer
 import com.sick.event.AdjustPlayerScore
 import com.sick.event.AnswerShown
+import com.sick.event.AnswerTimerExpired
+import com.sick.event.AnswerTimerTick
 import com.sick.event.GameEvent
 import com.sick.event.HostAccepted
 import com.sick.event.HostRejected
@@ -22,6 +24,8 @@ import com.sick.event.SelectActivePlayer
 import com.sick.event.SkipQuestion
 import com.sick.event.SkipRound
 import com.sick.event.StartGame
+import com.sick.event.TimerExpired
+import com.sick.event.TimerTick
 import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.Package
@@ -49,14 +53,14 @@ class DesktopSessionController(
     private var extractedBasePath: Path? = null
 
     private var engine: GameEngine = createEngine(emptyPack())
-    private var timer: GameTimer = GameTimer(engine, scope)
+    private var timer: GameTimer = createQuestionTimers().first
+    private var answerTimer: GameTimer = createQuestionTimers().second
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
+    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, answerTimer, engine, scope, ::showAnswer, ::revealQuestion)
 
     private var mediaStopSignal = 0
     private var mediaPaused = false
     private var showCompleted = false
-    private var lastKnownPhase: GamePhase = GamePhase.Lobby
 
     private var stateChangeCount = 0L
     private var lastStateChangeMs = 0L
@@ -99,88 +103,46 @@ class DesktopSessionController(
         )
     }
 
-    fun startGame() = process(StartGame)
+    fun startGame() = dispatch(StartGame)
+    fun selectActivePlayer(playerId: UUID) = dispatch(SelectActivePlayer(playerId))
+    fun selectQuestion(questionId: UUID) {
+        showCompleted = false
+        dispatch(QuestionSelected(questionId))
+    }
+    fun chooseAnsweringPlayer(playerId: UUID) = dispatch(PlayerBuzzed(playerId))
+    fun markAnswerCorrect() = dispatch(HostAccepted)
+    fun markAnswerWrong() = dispatch(HostRejected)
+    fun skipQuestion() = dispatch(SkipQuestion)
+    fun skipRound() = dispatch(SkipRound)
+    fun showAnswer() = dispatch(AnswerShown)
+    fun nextRound() = dispatch(NextRound)
+    fun adjustScore(playerId: UUID, delta: Int) = dispatch(AdjustPlayerScore(playerId, delta))
 
-    fun selectActivePlayer(playerId: UUID) = process(SelectActivePlayer(playerId))
+    fun pauseTimer() = dispatch(PauseTimer, setMediaPaused = true)
+    fun resumeTimer() = dispatch(ResumeTimer, setMediaPaused = false)
 
     fun toggleShowCompleted() {
         showCompleted = !showCompleted
         uiState = uiState.copy(showCompleted = showCompleted)
     }
 
-    fun selectQuestion(questionId: UUID) {
-        showCompleted = false
-        process(QuestionSelected(questionId))
-    }
-
-    fun chooseAnsweringPlayer(playerId: UUID) {
-        process(PlayerBuzzed(playerId))
-    }
-
-    fun pauseTimer() {
-        mediaPaused = true
-        val previousPhase = engine.phase
-        val wasTimerPaused = engine.state.isTimerPaused
-        engine.process(PauseTimer).fold(
-            ifLeft = { error ->
-                mediaPaused = false
-                setError(error.message)
-            },
-            ifRight = {
-                timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
-                clearMessages()
-                publishState()
-                autoSelectIfSingleCandidate()
-            },
-        )
-    }
-
-    fun resumeTimer() {
-        mediaPaused = false
-        val previousPhase = engine.phase
-        val wasTimerPaused = engine.state.isTimerPaused
-        engine.process(ResumeTimer).fold(
-            ifLeft = { error ->
-                mediaPaused = true
-                setError(error.message)
-            },
-            ifRight = {
-                timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
-                clearMessages()
-                publishState()
-                autoSelectIfSingleCandidate()
-            },
-        )
-    }
-
-    fun markAnswerCorrect() = process(HostAccepted)
-
-    fun markAnswerWrong() = process(HostRejected)
-
-    fun skipQuestion() = process(SkipQuestion)
-
-    fun skipRound() = process(SkipRound)
-
-    fun showAnswer() = process(AnswerShown)
-
-    private fun revealQuestion() = process(QuestionRevealed)
-
-    fun nextRound() = process(NextRound)
-
-    fun adjustScore(playerId: UUID, delta: Int) = process(AdjustPlayerScore(playerId, delta))
-
-    private fun process(event: GameEvent) {
-        val previousPhase = engine.phase
-        val wasTimerPaused = engine.state.isTimerPaused
-        logger.debug { "process: ${event::class.simpleName} from phase=$previousPhase, thread=${Thread.currentThread().name}" }
+    /**
+     * Single host entry point. Side effects on [mediaPaused] happen BEFORE the
+     * engine call so the UI reflects user intent immediately; if the engine
+     * rejects the event, [mediaPaused] is rolled back to its prior value.
+     */
+    private fun dispatch(event: GameEvent, setMediaPaused: Boolean? = null) {
+        val previousMediaPaused = mediaPaused
+        if (setMediaPaused != null) mediaPaused = setMediaPaused
+        logger.debug { "dispatch: ${event::class.simpleName}, previousPhase=${engine.previousPhase}, thread=${Thread.currentThread().name}" }
         engine.process(event).fold(
             ifLeft = { error ->
-                logger.warn { "process: ${event::class.simpleName} rejected: ${error.message}" }
+                logger.warn { "dispatch: ${event::class.simpleName} rejected: ${error.message}" }
+                mediaPaused = previousMediaPaused
                 setError(error.message)
             },
             ifRight = {
-                logger.debug { "process: ${event::class.simpleName} OK -> ${engine.phase.name}" }
-                timerOrchestrator.onPhaseChange(previousPhase, engine.phase, wasTimerPaused)
+                logger.debug { "dispatch: ${event::class.simpleName} OK -> ${engine.phase.name}" }
                 clearMessages()
                 publishState()
                 autoSelectIfSingleCandidate()
@@ -255,14 +217,38 @@ class DesktopSessionController(
         logger.info { "=== End Pack ===" }
     }
 
+    private fun createQuestionTimers(): Pair<GameTimer, GameTimer> {
+        val q = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = {
+                logger.debug { "question-timer.onExpired: TimerExpired fired by timer callback" }
+                engine.process(TimerExpired)
+            },
+            scope = scope,
+            name = "question-timer",
+        )
+        val a = GameTimer(
+            onTick = { engine.process(AnswerTimerTick) },
+            onExpired = {
+                logger.debug { "answer-timer.onExpired: AnswerTimerExpired fired by timer callback" }
+                engine.process(AnswerTimerExpired)
+            },
+            scope = scope,
+            name = "answer-timer",
+        )
+        return q to a
+    }
+
     private fun replaceSession(pack: Package) {
         timerOrchestrator.stop()
         server.stop()
 
         engine = createEngine(pack)
-        timer = GameTimer(engine, scope)
+        val (qTimer, aTimer) = createQuestionTimers()
+        timer = qTimer
+        answerTimer = aTimer
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-        timerOrchestrator = TimerOrchestrator(timer, engine, scope, ::showAnswer, ::revealQuestion)
+        timerOrchestrator = TimerOrchestrator(timer, answerTimer, engine, scope, ::showAnswer, ::revealQuestion)
         mediaPaused = false
         mediaStopSignal = 0
         bindEngine(engine)
@@ -272,10 +258,7 @@ class DesktopSessionController(
     }
 
     private fun bindEngine(target: GameEngine) {
-        lastKnownPhase = target.phase
-        target.addListener { _, newPhase ->
-            val previousPhase = lastKnownPhase
-            lastKnownPhase = newPhase
+        target.addListener { _, _, previousPhase, newPhase ->
             val isMediaActive = timerOrchestrator.isMediaPending
             when {
                 previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && isMediaActive ->
@@ -363,6 +346,8 @@ class DesktopSessionController(
         uiState = uiState.copy(errorMessage = null, infoMessage = null)
     }
 
+    private fun revealQuestion() = dispatch(QuestionRevealed)
+
     private fun createEngine(pack: Package): GameEngine = GameEngine(pack)
 
     private fun emptyPack() = Package(
@@ -372,5 +357,4 @@ class DesktopSessionController(
         author = "",
         rounds = emptyList(),
     )
-
 }

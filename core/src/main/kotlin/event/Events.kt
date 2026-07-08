@@ -22,6 +22,8 @@ data object PauseTimer : GameEvent
 data object ResumeTimer : GameEvent
 data object TimerTick : GameEvent
 data object TimerExpired : GameEvent
+data object AnswerTimerTick : GameEvent
+data object AnswerTimerExpired : GameEvent
 data object SkipQuestion : GameEvent
 
 // Host judging

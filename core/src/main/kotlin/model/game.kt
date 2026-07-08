@@ -12,6 +12,8 @@ data class GameState(
     val playedQuestionIds: Set<UUID> = emptySet(),
     val timerSeconds: Int = 30,
     val timerRemaining: Int = 0,
+    val answerTimerSeconds: Int = 15,
+    val answerTimerRemaining: Int = 0,
     val isTimerPaused: Boolean = false,
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),
     val skipVotePlayerIds: Set<UUID> = emptySet(),
@@ -28,4 +30,14 @@ data class GameState(
     val isGameOver: Boolean get() = currentRoundIndex >= pack.rounds.size
 
     fun findPlayer(id: UUID): Player? = players.find { it.id == id }
+}
+
+/**
+ * Returns true if every player has either failed their buzz-in or skipped (voted
+ * to skip) on the current question, meaning the round is exhausted and the
+ * next event should advance the engine to ShowingAnswer.
+ */
+fun GameState.allPlayersAccountedFor(): Boolean {
+    val allIds = players.map { it.id }.toSet()
+    return (skipVotePlayerIds + failedBuzzPlayerIds).containsAll(allIds)
 }

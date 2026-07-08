@@ -99,6 +99,15 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                 Text("Answering player: $answeringName")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (state.isTimerPaused) {
+                        Button(onClick = controller::resumeTimer) {
+                            Text("Resume")
+                        }
+                    } else {
+                        Button(onClick = controller::pauseTimer) {
+                            Text("Pause")
+                        }
+                    }
                     Button(
                         onClick = controller::markAnswerCorrect,
                         colors = ButtonDefaults.buttonColors(backgroundColor = Palette.Success, contentColor = Color.White),

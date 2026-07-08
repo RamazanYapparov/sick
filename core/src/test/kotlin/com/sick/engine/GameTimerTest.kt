@@ -26,7 +26,12 @@ class GameTimerTest {
     @Test
     fun `start fires ticks and TimerExpired after elapsed time`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
         val initialRemaining = engine.state.timerRemaining  // 30
 
         timer.start(3)
@@ -40,7 +45,12 @@ class GameTimerTest {
     @Test
     fun `stop cancels the timer before TimerExpired fires`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
         val initialRemaining = engine.state.timerRemaining
 
         timer.start(5)
@@ -55,7 +65,12 @@ class GameTimerTest {
     @Test
     fun `start twice cancels the first job`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
 
         timer.start(3)
         advanceTimeBy(501L)    // no ticks yet (first delay fires at t=1000)
@@ -71,7 +86,12 @@ class GameTimerTest {
     @Test
     fun `stop before start does not throw`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
 
         timer.stop()  // no-op: job is null
 
@@ -81,7 +101,12 @@ class GameTimerTest {
     @Test
     fun `timer drives full phase transition from ShowingQuestion to ShowingAnswer`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
 
         timer.start(1)
@@ -93,7 +118,12 @@ class GameTimerTest {
     @Test
     fun `paused timer does not advance elapsed question state`() = runTest {
         val engine = engineAtShowingQuestion()
-        val timer = GameTimer(engine, this)
+        val timer = GameTimer(
+            onTick = { engine.process(TimerTick) },
+            onExpired = { engine.process(TimerExpired) },
+            scope = this,
+            name = "test-timer",
+        )
         engine.process(PauseTimer)
         val before = engine.state.timerRemaining
 

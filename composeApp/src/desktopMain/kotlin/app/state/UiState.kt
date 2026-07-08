@@ -27,6 +27,7 @@ data class DesktopUiState(
     val lowestScoreCandidates: List<Player>,
     val timerRemaining: Int,
     val isTimerPaused: Boolean,
+    val answerTimerRemaining: Int,
     val mediaActive: Boolean,
     val mediaStopSignal: Int,
     val mediaPaused: Boolean,
@@ -55,6 +56,7 @@ data class DesktopUiState(
             lowestScoreCandidates = emptyList(),
             timerRemaining = 0,
             isTimerPaused = false,
+            answerTimerRemaining = 15,
             mediaActive = false,
             mediaStopSignal = 0,
             mediaPaused = false,
@@ -118,6 +120,7 @@ fun DesktopUiState.withEngineSnapshot(
         lowestScoreCandidates = state.lowestScoreCandidates(),
         timerRemaining = state.timerRemaining,
         isTimerPaused = state.isTimerPaused,
+        answerTimerRemaining = state.answerTimerRemaining,
         serverUrl = serverUrl,
         hasPack = hasPack,
     )

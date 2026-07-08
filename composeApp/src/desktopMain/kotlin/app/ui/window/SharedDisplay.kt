@@ -464,8 +464,20 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                     )
                     Text("${question.price} points", fontSize = bodySize, color = Color.White)
                 }
-                if (state.timerRemaining > 0) {
-                    Text("${state.timerRemaining}", fontSize = timerSize, fontWeight = FontWeight.Bold, color = Color(0xFFF36C5B))
+                // During PlayerAnswering: answer timer. Other phases: question timer.
+                when (state.phase) {
+                    GamePhase.PlayerAnswering -> Text(
+                        text = "${state.answerTimerRemaining}",
+                        fontSize = timerSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF36C5B),
+                    )
+                    else -> if (state.timerRemaining > 0) Text(
+                        text = "${state.timerRemaining}",
+                        fontSize = timerSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF36C5B),
+                    )
                 }
             }
 

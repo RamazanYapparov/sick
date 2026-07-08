@@ -32,10 +32,34 @@ class GameEngine(pack: Package) {
     private var _phase: GamePhase = GamePhase.Lobby
     val phase: GamePhase get() = synchronized(lock) { _phase }
 
-    private val listeners = mutableListOf<(GameState, GamePhase) -> Unit>()
+    private var _previousState: GameState = GameState(pack = pack)
+    val previousState: GameState get() = synchronized(lock) { _previousState }
 
-    fun addListener(listener: (GameState, GamePhase) -> Unit) {
+    private var _previousPhase: GamePhase = GamePhase.Lobby
+    val previousPhase: GamePhase get() = synchronized(lock) { _previousPhase }
+
+    // Listeners run under `lock` so addListener / removeListener / notifyListeners
+    // are all serialised. The listener type therefore does not need to be
+    // CopyOnWriteArrayList; we keep a regular ArrayList.
+    private val listeners =
+        mutableListOf<(GameState, GameState, GamePhase, GamePhase) -> Unit>()
+
+    /**
+     * Subscribe to phase transitions. Each successful `process(event)` triggers
+     * every registered listener once with the (previousState, currentState,
+     * previousPhase, currentPhase) snapshot. Listeners are invoked UNDER the
+     * engine's monitor lock so they observe a consistent view, but because the
+     * lock is reentrant another goroutine / thread could attempt synchronous
+     * re-entry by calling `engine.process` from a listener — DO NOT do that.
+     * Dispatch from listeners via an external coroutine, or via the engine's
+     * own queue if one is added later.
+     */
+    fun addListener(listener: (GameState, GameState, GamePhase, GamePhase) -> Unit) {
         synchronized(lock) { listeners.add(listener) }
+    }
+
+    fun removeListener(listener: (GameState, GameState, GamePhase, GamePhase) -> Unit) {
+        synchronized(lock) { listeners.remove(listener) }
     }
 
     fun process(event: GameEvent): Either<GameError, GameState> = synchronized(lock) {
@@ -48,10 +72,12 @@ class GameEngine(pack: Package) {
 
         return@synchronized applyEvent(event).map { newState ->
             val oldState = _state
+            val oldPhase = _phase
+            _previousState = oldState
+            _previousPhase = oldPhase
             _state = newState
-            val newPhase = nextPhase(event, oldState)
-            _phase = newPhase
-            logger.debug { "process: ${event::class.simpleName} -> $_phase (${_state.timerRemaining}s)" }
+            _phase = nextPhase(event, oldState)
+            logger.debug { "process: ${event::class.simpleName} $_previousPhase -> $_phase (${_state.timerRemaining}s)" }
             notifyListeners()
             _state
         }
@@ -84,6 +110,10 @@ class GameEngine(pack: Package) {
                 HostRejected::class,
                 SkipQuestion::class,
                 AdjustPlayerScore::class,
+                PauseTimer::class,
+                ResumeTimer::class,
+                AnswerTimerTick::class,
+                AnswerTimerExpired::class,
             )
             GamePhase.ShowingAnswer -> setOf(AnswerShown::class, AdjustPlayerScore::class)
             GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class)
@@ -116,6 +146,7 @@ class GameEngine(pack: Package) {
                     currentQuestion = question,
                     playedQuestionIds = _state.playedQuestionIds + event.questionId,
                     timerRemaining = _state.timerSeconds,
+                    answerTimerRemaining = _state.answerTimerSeconds,
                     isTimerPaused = false,
                     failedBuzzPlayerIds = emptySet(),
                     skipVotePlayerIds = emptySet(),
@@ -127,16 +158,17 @@ class GameEngine(pack: Package) {
             is PlayerBuzzed -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
-                _state.copy(answeringPlayerId = event.playerId)
+                _state.copy(
+                    answeringPlayerId = event.playerId,
+                    answerTimerRemaining = _state.answerTimerSeconds,
+                )
             }
 
             is PlayerSkipped -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 val newSkipVotes = _state.skipVotePlayerIds + event.playerId
-                val allPlayerIds = _state.players.map { it.id }.toSet()
-                val accountedFor = newSkipVotes + _state.failedBuzzPlayerIds
-                if (accountedFor.containsAll(allPlayerIds)) {
+                if (_state.copy(skipVotePlayerIds = newSkipVotes).allPlayersAccountedFor()) {
                     _state.copy(
                         skipVotePlayerIds = emptySet(),
                         failedBuzzPlayerIds = emptySet(),
@@ -156,6 +188,12 @@ class GameEngine(pack: Package) {
             } else {
                 _state.copy(timerRemaining = (_state.timerRemaining - 1).coerceAtLeast(0))
             }
+            is AnswerTimerTick -> if (_state.isTimerPaused) {
+                _state
+            } else {
+                _state.copy(answerTimerRemaining = (_state.answerTimerRemaining - 1).coerceAtLeast(0))
+            }
+            is AnswerTimerExpired -> finalizePlayerFailure(event, _state.answeringPlayerId).bind()
             is TimerExpired -> if (_state.isTimerPaused) {
                 _state
             } else {
@@ -181,33 +219,7 @@ class GameEngine(pack: Package) {
                     )
             }
 
-            is HostRejected -> {
-                val playerId = ensureNotNull(_state.answeringPlayerId) { GameError.InvalidEvent(event, _phase) }
-                val question  = ensureNotNull(_state.currentQuestion)  { GameError.InvalidEvent(event, _phase) }
-                val newFailedIds = _state.failedBuzzPlayerIds + playerId
-                val allPlayerIds = _state.players.map { it.id }.toSet()
-                val accountedFor = _state.skipVotePlayerIds + newFailedIds
-                if (accountedFor.containsAll(allPlayerIds)) {
-                    _state.updatePlayerScore(playerId) { it.subtractScore(question.price) }
-                        .mapLeft { GameError.PlayerError(it) }
-                        .bind()
-                        .copy(
-                            answeringPlayerId = null,
-                            skipVotePlayerIds = emptySet(),
-                            failedBuzzPlayerIds = emptySet(),
-                            timerRemaining = 0,
-                            isTimerPaused = false,
-                        )
-                } else {
-                    _state.updatePlayerScore(playerId) { it.subtractScore(question.price) }
-                        .mapLeft { GameError.PlayerError(it) }
-                        .bind()
-                        .copy(
-                            answeringPlayerId = null,
-                            failedBuzzPlayerIds = newFailedIds,
-                        )
-                }
-            }
+            is HostRejected -> finalizePlayerFailure(event, _state.answeringPlayerId).bind()
 
             is AnswerShown -> _state.copy(
                 currentQuestion = null,
@@ -240,6 +252,41 @@ class GameEngine(pack: Package) {
         }
     }
 
+    /**
+     * Shared handler for AnswerTimerExpired and HostRejected: subtract the
+     * question price from the answering player, flag their buzz as failed,
+     * and either reset per-question bookkeeping (if that was the last player
+     * accounted for) or leave the question open for the rest.
+     */
+    private fun finalizePlayerFailure(
+        event: GameEvent,
+        playerId: UUID?,
+    ): Either<GameError, GameState> = either {
+        val pid = ensureNotNull(playerId) { GameError.InvalidEvent(event, _phase) }
+        val question = ensureNotNull(_state.currentQuestion) { GameError.InvalidEvent(event, _phase) }
+        val newFailedIds = _state.failedBuzzPlayerIds + pid
+        val allAccounted = _state.copy(failedBuzzPlayerIds = newFailedIds).allPlayersAccountedFor()
+        val afterDeduction = _state.updatePlayerScore(pid) { it.subtractScore(question.price) }
+            .mapLeft { GameError.PlayerError(it) }
+            .bind()
+        if (allAccounted) {
+            afterDeduction.copy(
+                answeringPlayerId = null,
+                skipVotePlayerIds = emptySet(),
+                failedBuzzPlayerIds = emptySet(),
+                timerRemaining = 0,
+                answerTimerRemaining = _state.answerTimerSeconds,
+                isTimerPaused = false,
+            )
+        } else {
+            afterDeduction.copy(
+                answeringPlayerId = null,
+                failedBuzzPlayerIds = newFailedIds,
+                answerTimerRemaining = _state.answerTimerSeconds,
+            )
+        }
+    }
+
     private fun nextPhase(event: GameEvent, oldState: GameState): GamePhase = when (event) {
         is StartGame -> GamePhase.ChoosingPlayer
         is SelectActivePlayer -> GamePhase.ChoosingQuestion
@@ -247,23 +294,18 @@ class GameEngine(pack: Package) {
         is QuestionRevealed -> GamePhase.ShowingQuestion
         is PlayerBuzzed -> GamePhase.PlayerAnswering
         is PlayerSkipped -> {
-            val allPlayerIds = oldState.players.map { it.id }.toSet()
             val newSkipVotes = oldState.skipVotePlayerIds + event.playerId
-            val accountedFor = newSkipVotes + oldState.failedBuzzPlayerIds
-            if (accountedFor.containsAll(allPlayerIds)) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+            if (oldState.copy(skipVotePlayerIds = newSkipVotes).allPlayersAccountedFor()) {
+                GamePhase.ShowingAnswer
+            } else {
+                GamePhase.ShowingQuestion
+            }
         }
-        is PauseTimer, is ResumeTimer -> _phase
         is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer
         is SkipQuestion -> GamePhase.ShowingAnswer
         is HostAccepted -> GamePhase.ShowingAnswer
-        is HostRejected -> {
-            val playerId = oldState.answeringPlayerId
-            val newFailedIds = if (playerId != null) oldState.failedBuzzPlayerIds + playerId else oldState.failedBuzzPlayerIds
-            val allAccounted = oldState.players.all { player ->
-                player.id in newFailedIds || player.id in oldState.skipVotePlayerIds
-            }
-            if (allAccounted) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
-        }
+        is HostRejected -> nextFailurePhase(oldState, oldState.answeringPlayerId)
+        is AnswerTimerExpired -> nextFailurePhase(oldState, oldState.answeringPlayerId)
         is SkipRound -> GamePhase.RoundEnd
         is AnswerShown -> when {
             _state.isGameOver -> GamePhase.GameOver
@@ -271,8 +313,18 @@ class GameEngine(pack: Package) {
             else -> GamePhase.ChoosingQuestion
         }
         is NextRound -> if (_state.isGameOver) GamePhase.GameOver else GamePhase.ChoosingPlayer
-        is PlayerJoined, is PlayerLeft, is PlayerRenamed -> _phase
-        is TimerTick, is AdjustPlayerScore -> _phase
+        // Phase-preserving events: every arm keeps the FSM in `_phase`.
+        is PauseTimer, is ResumeTimer,
+        is PlayerJoined, is PlayerLeft, is PlayerRenamed,
+        is TimerTick, is AdjustPlayerScore, is AnswerTimerTick -> _phase
+    }
+
+    private fun nextFailurePhase(oldState: GameState, playerId: UUID?): GamePhase {
+        val newFailedIds =
+            if (playerId != null) oldState.failedBuzzPlayerIds + playerId
+            else oldState.failedBuzzPlayerIds
+        val candidate = oldState.copy(failedBuzzPlayerIds = newFailedIds)
+        return if (candidate.allPlayersAccountedFor()) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
     }
 
     private fun findQuestion(id: UUID): Question<*>? =
@@ -282,6 +334,6 @@ class GameEngine(pack: Package) {
             .find { it.id == id }
 
     private fun notifyListeners() {
-        listeners.forEach { it(_state, _phase) }
+        listeners.forEach { it(_previousState, _state, _previousPhase, _phase) }
     }
 }

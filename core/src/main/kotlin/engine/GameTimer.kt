@@ -11,33 +11,30 @@ import kotlinx.coroutines.launch
 private val logger = KotlinLogging.logger {}
 
 class GameTimer(
-    private val engine: GameEngine,
+    private val onTick: () -> Unit,
+    private val onExpired: () -> Unit,
     private val scope: CoroutineScope,
+    /** Label used in every log line so multiple timers in the same JVM are distinguishable. */
+    private val name: String = "timer",
 ) {
     private var job: Job? = null
 
     fun start(seconds: Int, offsetSeconds: Int = 0) {
         stop()
-        logger.info { "timer: start seconds=$seconds offset=$offsetSeconds" }
+        logger.info { "$name: start seconds=$seconds offset=$offsetSeconds" }
         job = scope.launch {
             if (offsetSeconds > 0) delay(offsetSeconds * 1000L)
-            repeat(seconds) {
+            repeat(seconds) { idx ->
                 delay(1000)
+                logger.trace { "$name: tick #${idx + 1}/$seconds" }
                 val t0 = System.currentTimeMillis()
-                engine.process(TimerTick)
+                onTick()
                 val elapsed = System.currentTimeMillis() - t0
                 if (elapsed > 100) {
-                    logger.warn { "timer: TimerTick took ${elapsed}ms to process" }
-                }
-                logger.trace { "timer: tick remaining=${engine.state.timerRemaining}" }
-                if (engine.state.timerRemaining <= 0) {
-                    engine.process(TimerExpired)
-                    logger.info { "timer: expired (reached 0)" }
-                    return@launch
+                    logger.warn { "$name: tick #${idx + 1} took ${elapsed}ms to process" }
                 }
             }
-            engine.process(TimerExpired)
-            logger.info { "timer: expired (repeat done)" }
+            onExpired()
         }
     }
 
@@ -46,3 +43,4 @@ class GameTimer(
         job = null
     }
 }
+

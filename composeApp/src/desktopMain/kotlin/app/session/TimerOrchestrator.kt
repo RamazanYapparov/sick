@@ -98,9 +98,21 @@ class TimerOrchestrator(
 
                 if (previous != GamePhase.ShowingQuestion && state.timerRemaining > 0) {
                     val fromFreshQuestion = previous == GamePhase.RevealingQuestion
+                    val questionHasMedia = state.currentQuestion?.hasMedia() == true
                     val offsetSeconds = if (fromFreshQuestion) TIMER_OFFSET_SECONDS else 0
-                    if (state.currentQuestion?.hasMedia() == true && fromFreshQuestion) {
-                        logger.info { "orchestrator: media pending, timer will start after media finishes" }
+                    // The question timer must NOT start ticking while the question's media
+                    // is still being played. Two paths can set that up:
+                    //   (a) fresh question entering from RevealingQuestion with media;
+                    //   (b) buzz-in/wrong sent us back to ShowingQuestion while the
+                    //       media is still pending (the player answered before the media
+                    //       finished). `mediaTimerPending` survives the buzz-in detour
+                    //       because the PlayerAnswering arm does not touch it.
+                    if (questionHasMedia && (fromFreshQuestion || mediaTimerPending)) {
+                        if (!mediaTimerPending) {
+                            logger.info { "orchestrator: media pending, timer will start after media finishes" }
+                        } else {
+                            logger.debug { "orchestrator: media still pending after buzz-in; question timer continues to wait" }
+                        }
                         mediaTimerPending = true
                     } else {
                         mediaTimerPending = false

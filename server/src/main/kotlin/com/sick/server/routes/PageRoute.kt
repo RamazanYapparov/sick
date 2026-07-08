@@ -95,7 +95,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       border-radius: 0;
       padding: 0;
       font-size: clamp(2.5rem, 8vw, 5rem);
-      background: linear-gradient(135deg, #ff795e 0%, #ff3d54 100%);
+      background: linear-gradient(135deg, #4f9dff 0%, #1f6fe0 100%);
       color: white;
     }
     #skip {
@@ -103,7 +103,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       border-radius: 0;
       padding: 0;
       font-size: clamp(2.5rem, 8vw, 5rem);
-      background: linear-gradient(135deg, #6ec6a0 0%, #2e9e6b 100%);
+      background: linear-gradient(135deg, #7a7f8a 0%, #505560 100%);
       color: white;
     }
     #join-btn:active,

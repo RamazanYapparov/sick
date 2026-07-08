@@ -67,7 +67,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
             Box(modifier = Modifier.weight(1f)) {
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(state.currentQuestion.answer, state.extractedBasePath, compact, bodySize)
+                    AnswerPanel(state.currentQuestion.answer, state.extractedBasePath, compact, bodySize, onMediaFinished)
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
@@ -385,7 +385,7 @@ internal fun SelectOptionsList(
 }
 
 @Composable
-private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodySize: TextUnit) {
+private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodySize: TextUnit, onMediaFinished: () -> Unit = {}) {
     @Suppress("UNUSED_LOCAL_VARIABLE") val reservedForFuture = basePath
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -419,7 +419,7 @@ private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodyS
                         Spacer(Modifier.height(8.dp))
                         Divider(color = Color(0x335F7D8D))
                         displayContents(answer.contents, basePath).forEach { item ->
-                            RenderQuestionDisplayItem(item = item, compact = compact, bodySize = bodySize)
+                            RenderQuestionDisplayItem(item = item, compact = compact, bodySize = bodySize, onMediaFinished = onMediaFinished)
                         }
                     }
                 }

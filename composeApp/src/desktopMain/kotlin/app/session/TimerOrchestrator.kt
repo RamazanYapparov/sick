@@ -2,6 +2,7 @@ package app.session
 
 import com.sick.engine.GameEngine
 import com.sick.engine.GameTimer
+import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.GameState
 import com.sick.model.Question
@@ -30,6 +31,7 @@ class TimerOrchestrator(
 
     private var mediaTimerPending = false
     val isMediaPending: Boolean get() = mediaTimerPending
+    private var answerMediaPending = false
     private var revealJob: Job? = null
 
     init {
@@ -66,9 +68,16 @@ class TimerOrchestrator(
             }
             GamePhase.ShowingAnswer -> {
                 mediaTimerPending = false
+                answerMediaPending = false
                 timer.stop()
                 answerTimer.stop()
-                scheduleReveal(ANSWER_REVEAL_MS, GamePhase.ShowingAnswer, onAnswerShown)
+                val answer = engine.state.currentQuestion?.answer
+                if (answer?.hasMedia() == true) {
+                    logger.info { "orchestrator: answer has media, waiting for media to finish before advancing" }
+                    answerMediaPending = true
+                } else {
+                    scheduleReveal(ANSWER_REVEAL_MS, GamePhase.ShowingAnswer, onAnswerShown)
+                }
             }
             GamePhase.PlayerAnswering -> {
                 // Buzz-in to PlayerAnswering: stop the question timer (it otherwise
@@ -150,7 +159,13 @@ class TimerOrchestrator(
     }
 
     fun onMediaFinished() {
-        logger.debug { "orchestrator: onMediaFinished, mediaPending=$mediaTimerPending" }
+        logger.debug { "orchestrator: onMediaFinished, mediaPending=$mediaTimerPending, answerMediaPending=$answerMediaPending" }
+        if (answerMediaPending) {
+            answerMediaPending = false
+            logger.info { "orchestrator: answer media finished, calling onAnswerShown" }
+            onAnswerShown()
+            return
+        }
         if (!mediaTimerPending) return
         mediaTimerPending = false
         val state = engine.state
@@ -165,6 +180,7 @@ class TimerOrchestrator(
         revealJob?.cancel()
         revealJob = null
         mediaTimerPending = false
+        answerMediaPending = false
         timer.stop()
         answerTimer.stop()
     }
@@ -172,3 +188,6 @@ class TimerOrchestrator(
 
 private fun Question<*>.hasMedia(): Boolean =
     contents.any { it is Content.Media && it.type in setOf(Content.Type.Video, Content.Type.Audio) }
+
+private fun Answer.hasMedia(): Boolean =
+    this is Answer.Simple && contents.any { it is Content.Media && it.type in setOf(Content.Type.Video, Content.Type.Audio) }

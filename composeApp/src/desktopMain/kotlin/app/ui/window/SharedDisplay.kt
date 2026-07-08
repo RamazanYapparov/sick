@@ -6,6 +6,7 @@ import app.ui.components.QrCode
 import app.ui.theme.Palette
 import app.ui.media.AudioPlayer
 import app.ui.media.VideoPlayer
+import app.ui.media.normalizeMediaUri
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
@@ -266,9 +267,7 @@ private fun RenderQuestionDisplayItem(
             if (compact) {
                 Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
             } else {
-                val uri = remember(item.absolutePath) {
-                    java.io.File(item.absolutePath).toURI().toString()
-                }
+                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
                 VideoPlayer(
                     uri = uri,
                     modifier = Modifier.fillMaxWidth().height(360.dp),
@@ -295,9 +294,7 @@ private fun RenderQuestionDisplayItem(
             if (compact) {
                 Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
             } else {
-                val uri = remember(item.absolutePath) {
-                    java.io.File(item.absolutePath).toURI().toString()
-                }
+                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
                 AudioPlayer(
                     uri = uri,
                     stopSignal = mediaStopSignal,

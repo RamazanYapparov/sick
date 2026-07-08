@@ -4,32 +4,40 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import app.session.DesktopSessionController
+import app.ui.media.VlcSupport
 
-fun main() = application {
-    val scope = rememberCoroutineScope()
-    val controller = remember { DesktopSessionController(scope) }
+fun main() {
+    // Must run before any vlcj component is touched (including ones
+    // indirectly referenced from Compose).
+    VlcSupport.initialize()
 
-    DisposableEffect(controller) {
-        onDispose {
-            controller.dispose()
+    application {
+        val scope = rememberCoroutineScope()
+        val controller = remember { DesktopSessionController(scope) }
+
+        DisposableEffect(controller) {
+            onDispose {
+                controller.dispose()
+                VlcSupport.shutdown()
+            }
         }
-    }
 
-    val uiState = controller.uiState
+        val uiState = controller.uiState
 
-    if (uiState.displayWindowVisible) {
+        if (uiState.displayWindowVisible) {
+            Window(
+                onCloseRequest = controller::hideDisplayWindow,
+                title = "sick - display",
+            ) {
+                SharedDisplayApp(uiState, onMediaFinished = controller::mediaFinished)
+            }
+        }
+
         Window(
-            onCloseRequest = controller::hideDisplayWindow,
-            title = "sick - display",
+            onCloseRequest = ::exitApplication,
+            title = "sick - host",
         ) {
-            SharedDisplayApp(uiState, onMediaFinished = controller::mediaFinished)
+            HostApp(controller)
         }
-    }
-
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "sick - host",
-    ) {
-        HostApp(controller)
     }
 }

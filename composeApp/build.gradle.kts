@@ -34,10 +34,13 @@ kotlin {
             implementation(libs.kotlin.logging)
             implementation(libs.logback.classic)
             implementation(libs.zxing.core)
+            implementation(libs.vlcj)
+            implementation(libs.jna)
+            implementation(libs.jna.platform)
 
             val javafxVersion = "21.0.5"
             listOf("win", "linux", "mac").forEach { platform ->
-                listOf("base", "graphics", "swing", "media").forEach { module ->
+                listOf("base", "graphics").forEach { module ->
                     implementation("org.openjfx:javafx-$module:$javafxVersion:$platform")
                 }
             }
@@ -64,7 +67,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.sick"
             packageVersion = "1.0.0"
-            modules("javafx.base", "javafx.graphics", "javafx.swing", "javafx.media")
+            modules("javafx.base", "javafx.graphics")
         }
     }
 }

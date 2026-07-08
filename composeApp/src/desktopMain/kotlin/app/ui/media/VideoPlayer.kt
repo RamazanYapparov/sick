@@ -96,6 +96,7 @@ fun VideoPlayer(
     modifier: Modifier = Modifier,
     stopSignal: Int = 0,
     paused: Boolean = false,
+    muted: Boolean = false,
     onFinished: () -> Unit = {},
 ) {
     val playerRef = remember { AtomicReference<EmbeddedMediaPlayer?>(null) }
@@ -198,7 +199,15 @@ fun VideoPlayer(
         mediaPlayer.events().addMediaPlayerEventListener(listener)
 
         try {
-            mediaPlayer.media().play(normalizedUri)
+            // Using the `:no-audio` VLC option is more reliable than
+            // `audio().setMute(true)` because libVLC never initialises the
+            // audio pipeline at all — no risk of an audio leak from a
+            // startup race when the player is muted.
+            if (muted) {
+                mediaPlayer.media().play(normalizedUri, ":no-audio")
+            } else {
+                mediaPlayer.media().play(normalizedUri)
+            }
         } catch (t: Throwable) {
             logger.error(t) { "VideoPlayer: media().play($uri) failed" }
             errorMessage = "Could not start playback: ${t.message}"

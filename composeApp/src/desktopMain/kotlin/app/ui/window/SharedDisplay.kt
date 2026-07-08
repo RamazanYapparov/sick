@@ -4,21 +4,16 @@ import app.ui.components.PlayerCards
 import app.ui.components.QuestionBoard
 import app.ui.components.QrCode
 import app.ui.theme.Palette
-import app.ui.media.AudioPlayer
-import app.ui.media.VideoPlayer
-import app.ui.media.normalizeMediaUri
 import app.state.DesktopUiState
-import app.state.QuestionDisplayItem
 import app.state.displayContents
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,12 +25,9 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -67,7 +59,15 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
             Box(modifier = Modifier.weight(1f)) {
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(state.currentQuestion.answer, state.extractedBasePath, compact, bodySize, onMediaFinished)
+                    AnswerPanel(
+                        state.currentQuestion.answer,
+                        state.extractedBasePath,
+                        compact,
+                        bodySize,
+                        onMediaFinished = onMediaFinished,
+                        mediaStopSignal = state.mediaStopSignal,
+                        mediaPaused = state.mediaPaused,
+                    )
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
@@ -111,22 +111,22 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 Spacer(modifier = Modifier.height(if (compact) 4.dp else 12.dp))
-                
+
                 Text(
                     text = "Connect to Play",
                     fontSize = if (compact) 14.sp else 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 Text(
                     text = "Scan the QR code or enter the connection URL in your browser to join as a player.",
                     fontSize = if (compact) 11.sp else 16.sp,
                     color = Color(0xFFB0C4DE)
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -141,7 +141,7 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                     )
                 }
             }
-            
+
             Box(
                 modifier = Modifier
                     .weight(0.8f)
@@ -190,130 +190,6 @@ private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
                 showCompleted = state.showCompleted,
                 fillHeight = true,
             )
-        }
-    }
-}
-
-@Composable
-private fun RevealingQuestionPlaceholder(state: DesktopUiState, compact: Boolean, bodySize: TextUnit) {
-    val question = state.currentQuestion ?: return
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                state.currentThemeName ?: "Question",
-                fontSize = if (compact) 16.sp else 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.AccentGold,
-            )
-            Text("${question.price} points", fontSize = bodySize, color = Color.White)
-        }
-    }
-}
-
-@Composable
-private fun RenderQuestionDisplayItem(
-    item: QuestionDisplayItem,
-    compact: Boolean,
-    bodySize: TextUnit,
-    onMediaFinished: () -> Unit = {},
-    mediaStopSignal: Int = 0,
-    mediaPaused: Boolean = false,
-) {
-    when (item) {
-        is QuestionDisplayItem.Text ->
-            Text(item.text, fontSize = bodySize, color = Color.White)
-        is QuestionDisplayItem.LocalImage -> {
-            val bitmap = remember(item.absolutePath) {
-                runCatching {
-                    java.io.File(item.absolutePath).inputStream().buffered()
-                        .use(::loadImageBitmap)
-                }.getOrNull()
-            }
-            if (bitmap != null)
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.Fit,
-                )
-            else
-                Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
-        }
-        is QuestionDisplayItem.RemoteImage -> {
-            val bitmap = remember(item.url) {
-                runCatching {
-                    item.url.openStream().buffered().use(::loadImageBitmap)
-                }.getOrNull()
-            }
-            if (bitmap != null)
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.Fit,
-                )
-            else
-                Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
-        }
-        is QuestionDisplayItem.LocalVideo -> {
-            if (compact) {
-                Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-                VideoPlayer(
-                    uri = uri,
-                    modifier = Modifier.fillMaxWidth().height(360.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
-        }
-        is QuestionDisplayItem.RemoteVideo -> {
-            if (compact) {
-                Text("▶ Video", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                VideoPlayer(
-                    uri = item.url.toString(),
-                    modifier = Modifier.fillMaxWidth().height(360.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
-        }
-        is QuestionDisplayItem.LocalAudio -> {
-            if (compact) {
-                Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-                AudioPlayer(
-                    uri = uri,
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
-        }
-        is QuestionDisplayItem.RemoteAudio -> {
-            if (compact) {
-                Text("♫ Audio", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                AudioPlayer(
-                    uri = item.url.toString(),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
         }
     }
 }
@@ -377,59 +253,6 @@ internal fun SelectOptionsList(
                         fontSize = effectiveBodySize,
                         color = textColor,
                         fontWeight = textFontWeight,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodySize: TextUnit, onMediaFinished: () -> Unit = {}) {
-    @Suppress("UNUSED_LOCAL_VARIABLE") val reservedForFuture = basePath
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
-        ) {
-            Text(
-                "Answer",
-                fontSize = if (compact) 16.sp else 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.AccentGold,
-            )
-            Divider(color = Color(0x335F7D8D))
-            when (answer) {
-                is Answer.Simple -> {
-                    answer.right.forEach { right ->
-                        Text(right, fontSize = bodySize, color = Color(0xFF5CCD8F), fontWeight = FontWeight.Bold)
-                    }
-                    if (answer.wrong.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
-                        Text("Also accepted:", fontSize = bodySize, color = Color.White)
-                        answer.wrong.forEach { wrong ->
-                            Text(wrong, fontSize = bodySize, color = Color(0xFFAAAAAA))
-                        }
-                    }
-                    if (answer.contents.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Divider(color = Color(0x335F7D8D))
-                        displayContents(answer.contents, basePath).forEach { item ->
-                            RenderQuestionDisplayItem(item = item, compact = compact, bodySize = bodySize, onMediaFinished = onMediaFinished)
-                        }
-                    }
-                }
-                is Answer.Select -> {
-                    SelectOptionsList(
-                        options = answer.options,
-                        basePath = basePath,
-                        compact = compact,
-                        bodySize = bodySize,
-                        revealCorrect = true,
                     )
                 }
             }

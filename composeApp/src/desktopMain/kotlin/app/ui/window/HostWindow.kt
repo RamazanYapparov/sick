@@ -9,6 +9,7 @@ import app.ui.components.HostAnswerCard
 import app.ui.theme.Palette
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
+import com.sick.state.GamePhase
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -112,7 +113,11 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Current Question", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (state.phase == GamePhase.ShowingAnswer) "Answer" else "Current Question",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
                 Box(
                     modifier = Modifier.fillMaxSize()
                         .border(1.dp, Color(0xFFB7AA93), RoundedCornerShape(20.dp))
@@ -120,13 +125,34 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                         .padding(12.dp),
                 ) {
                     if (state.currentQuestion != null) {
-                        CurrentQuestionPanel(
-                            state = state,
-                            compact = true,
-                            bodySize = 12.sp,
-                            timerSize = 24.sp,
-                            onMediaFinished = controller::mediaFinished,
-                        )
+                        if (state.phase == GamePhase.ShowingAnswer) {
+                            AnswerPanel(
+                                answer = state.currentQuestion.answer,
+                                basePath = state.extractedBasePath,
+                                compact = true,
+                                bodySize = 12.sp,
+                                onMediaFinished = controller::mediaFinished,
+                                mediaStopSignal = state.mediaStopSignal,
+                                mediaPaused = state.mediaPaused,
+                            )
+                        } else if (state.phase == GamePhase.RevealingQuestion) {
+                            // Match the shared display: don't show question content
+                            // (video/audio) until the reveal animation finishes, so
+                            // both windows start media playback in sync.
+                            RevealingQuestionPlaceholder(
+                                state = state,
+                                compact = true,
+                                bodySize = 12.sp,
+                            )
+                        } else {
+                            CurrentQuestionPanel(
+                                state = state,
+                                compact = true,
+                                bodySize = 12.sp,
+                                timerSize = 24.sp,
+                                onMediaFinished = controller::mediaFinished,
+                            )
+                        }
                     } else {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("No active question", color = Color(0xFF7A9BAA))

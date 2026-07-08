@@ -319,7 +319,74 @@ private fun RenderQuestionDisplayItem(
 }
 
 @Composable
+internal fun SelectOptionsList(
+    options: List<Answer.Select.Option>,
+    basePath: Path?,
+    compact: Boolean,
+    bodySize: TextUnit,
+    revealCorrect: Boolean,
+) {
+    // basePath is reserved for future per-option media; intentionally unused for v1.
+    @Suppress("UNUSED_PARAMETER") val reservedBasePath = basePath
+    val effectiveBodySize = if (options.size >= 6) bodySize * 0.9f else bodySize
+    val letterSize = bodySize * 1.1f
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { option ->
+            val highlight = revealCorrect && option.correct
+            val confirmed = revealCorrect && !option.correct
+            val rowBg = if (highlight) Color(0xFF1E4D2B) else Color(0x225F7D8D)
+            val textColor = when {
+                highlight -> Color(0xFF5CCD8F)
+                confirmed -> Color(0xFFAAAAAA)
+                else -> Color.White
+            }
+            val letterBg = if (highlight) Color(0xFF1E4D2B) else Color(0x335F7D8D)
+            val letterColor = when {
+                highlight -> Color(0xFF5CCD8F)
+                confirmed -> Color(0xFFAAAAAA)
+                else -> Palette.AccentGold
+            }
+            val textFontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(rowBg, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(letterBg, RoundedCornerShape(if (compact) 4.dp else 6.dp))
+                            .padding(horizontal = if (compact) 6.dp else 10.dp, vertical = if (compact) 2.dp else 4.dp),
+                    ) {
+                        Text(
+                            option.name,
+                            fontSize = letterSize,
+                            color = letterColor,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Text(
+                        option.answer,
+                        fontSize = effectiveBodySize,
+                        color = textColor,
+                        fontWeight = textFontWeight,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodySize: TextUnit) {
+    @Suppress("UNUSED_LOCAL_VARIABLE") val reservedForFuture = basePath
     Card(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = Palette.DarkSurface,
@@ -357,18 +424,13 @@ private fun AnswerPanel(answer: Answer, basePath: Path?, compact: Boolean, bodyS
                     }
                 }
                 is Answer.Select -> {
-                    answer.options.forEach { option ->
-                        val bg = if (option.correct) Color(0xFF1E4D2B) else Color(0x225F7D8D)
-                        val textColor = if (option.correct) Color(0xFF5CCD8F) else Color(0xFFAAAAAA)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(bg, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) {
-                            Text("${option.name}: ${option.answer}", fontSize = bodySize, color = textColor, fontWeight = if (option.correct) FontWeight.Bold else FontWeight.Normal)
-                        }
-                    }
+                    SelectOptionsList(
+                        options = answer.options,
+                        basePath = basePath,
+                        compact = compact,
+                        bodySize = bodySize,
+                        revealCorrect = true,
+                    )
                 }
             }
         }
@@ -417,6 +479,16 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                     onMediaFinished = onMediaFinished,
                     mediaStopSignal = state.mediaStopSignal,
                     mediaPaused = state.mediaPaused,
+                )
+            }
+            val selectAnswer = question.answer
+            if (selectAnswer is Answer.Select) {
+                SelectOptionsList(
+                    options = selectAnswer.options,
+                    basePath = state.extractedBasePath,
+                    compact = compact,
+                    bodySize = bodySize,
+                    revealCorrect = false,
                 )
             }
         }

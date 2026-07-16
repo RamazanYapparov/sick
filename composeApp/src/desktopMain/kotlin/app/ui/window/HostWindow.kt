@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +34,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -65,8 +67,12 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                     }
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = controller::showPackBrowser) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = "Browse", modifier = Modifier.padding(end = 4.dp).size(18.dp))
+                            Text("Browse Packs")
+                        }
                         Button(onClick = controller::loadPackFromDialog) {
-                            Text("Load Pack")
+                            Text("Open File...")
                         }
                         Button(onClick = controller::resetGame) {
                             Text("Create Game")
@@ -162,4 +168,23 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
             }
         }
     }
+
+    // Pack browser dialog
+    if (state.showPackBrowser) {
+        PackBrowserDialog(
+            scannedPacks = state.scannedPacks,
+            isScanning = state.isScanningPacks,
+            onDismiss = controller::hidePackBrowser,
+            onRefresh = controller::refreshLocalPacks,
+            onBrowseFiles = {
+                controller.hidePackBrowser()
+                controller.loadPackFromDialog()
+            },
+            onChoosePack = controller::chooseLocalPack,
+        )
+    }
 }
+
+
+
+

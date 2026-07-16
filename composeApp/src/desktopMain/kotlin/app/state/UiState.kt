@@ -1,5 +1,6 @@
 package app.state
 
+import app.session.ScannedPackInfo
 import com.sick.engine.GameEngine
 import com.sick.model.Player
 import com.sick.model.Question
@@ -38,6 +39,9 @@ data class DesktopUiState(
     val displayWindowVisible: Boolean,
     val hasPack: Boolean,
     val showCompleted: Boolean = false,
+    val showPackBrowser: Boolean = false,
+    val scannedPacks: List<ScannedPackInfo> = emptyList(),
+    val isScanningPacks: Boolean = false,
 ) {
     companion object {
         fun initial(port: Int) = DesktopUiState(
@@ -57,7 +61,7 @@ data class DesktopUiState(
             lowestScoreCandidates = emptyList(),
             timerRemaining = 0,
             isTimerPaused = false,
-            answerTimerRemaining = 15,
+            answerTimerRemaining = 20,
             mediaActive = false,
             mediaStopSignal = 0,
             mediaPaused = false,

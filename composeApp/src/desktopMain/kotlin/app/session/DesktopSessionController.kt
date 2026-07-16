@@ -3,6 +3,8 @@ package app.session
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.session.PackScanner
+import app.session.ScannedPackInfo
 import app.state.DesktopUiState
 import app.state.withEngineSnapshot
 import com.sick.engine.GameEngine
@@ -33,9 +35,11 @@ import com.sick.server.GameServer
 import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.EventQueue
 import java.nio.file.Path
 import java.util.UUID
@@ -51,6 +55,8 @@ class DesktopSessionController(
     private var loadedPack: Package? = null
     private var loadedPackPath: String? = null
     private var extractedBasePath: Path? = null
+    private var scannedPacks: List<ScannedPackInfo> = emptyList()
+    private var isScanningPacks: Boolean = false
 
     private var engine: GameEngine = createEngine(emptyPack())
     private var timer: GameTimer = createQuestionTimers().first
@@ -92,6 +98,39 @@ class DesktopSessionController(
 
     fun loadPackFromDialog() {
         val path = pickSiqFile() ?: return
+        loadPack(path)
+    }
+
+    fun showPackBrowser() {
+        uiState = uiState.copy(showPackBrowser = true)
+        if (uiState.scannedPacks.isEmpty() && !isScanningPacks) {
+            refreshLocalPacks()
+        }
+    }
+
+    fun hidePackBrowser() {
+        uiState = uiState.copy(showPackBrowser = false)
+    }
+
+    fun refreshLocalPacks() {
+        if (isScanningPacks) return
+        isScanningPacks = true
+        uiState = uiState.copy(isScanningPacks = true)
+        scope.launch {
+            val packs = withContext(Dispatchers.IO) {
+                PackScanner.scan()
+            }
+            scannedPacks = packs
+            isScanningPacks = false
+            uiState = uiState.copy(
+                scannedPacks = packs,
+                isScanningPacks = false,
+            )
+        }
+    }
+
+    fun chooseLocalPack(path: Path) {
+        hidePackBrowser()
         loadPack(path)
     }
 
@@ -294,6 +333,9 @@ class DesktopSessionController(
             mediaStopSignal = mediaStopSignal,
             mediaPaused = mediaPaused,
             showCompleted = showCompleted,
+            showPackBrowser = uiState.showPackBrowser,
+            scannedPacks = scannedPacks,
+            isScanningPacks = isScanningPacks,
         )
     }
 

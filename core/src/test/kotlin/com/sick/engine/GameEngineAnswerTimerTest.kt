@@ -28,16 +28,16 @@ class GameEngineAnswerTimerTest {
     }
 
     @Test
-    fun `GameState has answerTimerSeconds default of 15`() {
+    fun `GameState has answerTimerSeconds default of 20`() {
         val engine = GameEngine(minimalPackage())
-        assertEquals(15, engine.state.answerTimerSeconds)
+        assertEquals(20, engine.state.answerTimerSeconds)
     }
 
     @Test
-    fun `PlayerBuzzed resets answerTimerRemaining to 15`() {
+    fun `PlayerBuzzed resets answerTimerRemaining to 20`() {
         val (engine, alice, _) = engineWithTwoPlayers()
         engine.advanceToPlayerAnswering(alice)
-        assertEquals(15, engine.state.answerTimerRemaining)
+        assertEquals(20, engine.state.answerTimerRemaining)
         assertEquals(GamePhase.PlayerAnswering, engine.phase)
     }
 
@@ -101,7 +101,7 @@ class GameEngineAnswerTimerTest {
         assertEquals(-100, engine.state.findPlayer(alice.id)!!.score)
         assertTrue(alice.id in engine.state.failedBuzzPlayerIds)
         assertFalse(bob.id in engine.state.failedBuzzPlayerIds)
-        assertEquals(15, engine.state.answerTimerRemaining)  // reset on partial transition
+        assertEquals(20, engine.state.answerTimerRemaining)  // reset on partial transition
     }
 
     @Test
@@ -141,16 +141,16 @@ class GameEngineAnswerTimerTest {
     fun `Fresh buzz-in resets answerTimerRemaining after a Wrong`() {
         val (engine, alice, bob) = engineWithTwoPlayers()
         engine.advanceToPlayerAnswering(alice)
-        // Drop Alice's answer to 10
+        // Drop Alice's answer to 15
         repeat(5) { engine.process(AnswerTimerTick) }
-        assertEquals(10, engine.state.answerTimerRemaining)
+        assertEquals(15, engine.state.answerTimerRemaining)
         engine.process(HostRejected)
         // Alice wronged -> ShowingQuestion (bob remains)
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
 
         engine.process(PlayerBuzzed(bob.id))
         // Fresh buzzer -> answer timer reset
-        assertEquals(15, engine.state.answerTimerRemaining)
+        assertEquals(20, engine.state.answerTimerRemaining)
     }
 
     @Test
@@ -168,7 +168,7 @@ class GameEngineAnswerTimerTest {
     }
 
     @Test
-    fun `QuestionSelected resets answerTimerRemaining to 15`() {
+    fun `QuestionSelected resets answerTimerRemaining to 20`() {
         val (engine, alice, _) = engineWithTwoPlayers()
         // Drive the engine through a buzz cycle that decrements answerTimerRemaining
         engine.process(SelectActivePlayer(alice.id))
@@ -176,12 +176,12 @@ class GameEngineAnswerTimerTest {
         engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(alice.id))
         repeat(5) { engine.process(AnswerTimerTick) }
-        assertEquals(10, engine.state.answerTimerRemaining)
+        assertEquals(15, engine.state.answerTimerRemaining)
         // Now move off the question via AnswerShown, then re-select a different question.
         engine.process(HostAccepted)
         engine.process(AnswerShown)
         engine.process(QuestionSelected(QUESTION_IDS[0][1]))
-        assertEquals(15, engine.state.answerTimerRemaining)
+        assertEquals(20, engine.state.answerTimerRemaining)
     }
 
     @Test

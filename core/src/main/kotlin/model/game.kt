@@ -12,7 +12,7 @@ data class GameState(
     val playedQuestionIds: Set<UUID> = emptySet(),
     val timerSeconds: Int = 30,
     val timerRemaining: Int = 0,
-    val answerTimerSeconds: Int = 15,
+    val answerTimerSeconds: Int = 20,
     val answerTimerRemaining: Int = 0,
     val isTimerPaused: Boolean = false,
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),

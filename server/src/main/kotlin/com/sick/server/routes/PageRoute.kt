@@ -163,23 +163,41 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
   </div>
   <script>
     let playerId = null;
+    let isInGame = false;
+    let wakeLockRequesting = false;
     let wakeLockSentinel = null;
 
     async function requestWakeLock() {
+      if (wakeLockRequesting) return;
+      if (!isInGame) return;
       if (!('wakeLock' in navigator)) {
         console.warn('Screen Wake Lock API not supported in this browser.');
         return;
       }
+      wakeLockRequesting = true;
       try {
+        if (wakeLockSentinel && !wakeLockSentinel.released) {
+          await wakeLockSentinel.release();
+          // Re-entrance guard (wakeLockRequesting) prevents recursion from the release event.
+        }
         wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', function() {
+          if (isInGame) {
+            requestWakeLock();
+          }
+        });
       } catch (e) {
         console.warn('Wake lock request failed:', e);
+        if (isInGame) {
+          setTimeout(requestWakeLock, 2000);
+        }
+      } finally {
+        wakeLockRequesting = false;
       }
     }
 
     document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState === 'visible' &&
-          document.getElementById('buzz-section').style.display === 'flex') {
+      if (document.visibilityState === 'visible' && isInGame) {
         requestWakeLock();
       }
     });
@@ -204,6 +222,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
         if (response.ok) {
           return response.json().then(function(data) {
             playerId = data.playerId;
+            isInGame = true;
             document.querySelector('main').style.display = 'none';
             document.getElementById('buzz-section').style.display = 'flex';
             document.getElementById('greeting').textContent = 'Hello, ' + name + '!';

@@ -156,6 +156,10 @@ internal fun RenderQuestionDisplayItem(
                 Image(
                     bitmap = bitmap,
                     contentDescription = null,
+                    // Always render the full image (no crop, no stretch).
+                    // `Fit` scales the bitmap to fit within the available
+                    // bounds while maintaining aspect ratio, so the entire
+                    // image is always visible (letterboxed if needed).
                     modifier = Modifier.fillMaxWidth(),
                     contentScale = ContentScale.Fit,
                 )
@@ -172,6 +176,10 @@ internal fun RenderQuestionDisplayItem(
                 Image(
                     bitmap = bitmap,
                     contentDescription = null,
+                    // Always render the full image (no crop, no stretch).
+                    // `Fit` scales the bitmap to fit within the available
+                    // bounds while maintaining aspect ratio, so the entire
+                    // image is always visible (letterboxed if needed).
                     modifier = Modifier.fillMaxWidth(),
                     contentScale = ContentScale.Fit,
                 )

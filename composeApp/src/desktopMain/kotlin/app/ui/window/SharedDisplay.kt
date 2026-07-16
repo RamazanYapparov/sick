@@ -5,10 +5,12 @@ import app.ui.components.QuestionBoard
 import app.ui.components.QrCode
 import app.ui.theme.Palette
 import app.state.DesktopUiState
+import app.state.QuestionDisplayItem
 import app.state.displayContents
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
@@ -263,14 +266,15 @@ internal fun SelectOptionsList(
 @Composable
 internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onMediaFinished: () -> Unit = {}) {
     val question = state.currentQuestion ?: return
+    val selectAnswer = question.answer
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         backgroundColor = Palette.DarkSurface,
         shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
+            modifier = Modifier.fillMaxSize().padding(if (compact) 12.dp else 24.dp),
             verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
         ) {
             Row(
@@ -306,25 +310,56 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
 
             Divider(color = Color(0x335F7D8D))
 
-            question.displayContents(state.extractedBasePath).forEach { item ->
-                RenderQuestionDisplayItem(
-                    item = item,
-                    compact = compact,
-                    bodySize = bodySize,
-                    onMediaFinished = onMediaFinished,
-                    mediaStopSignal = state.mediaStopSignal,
-                    mediaPaused = state.mediaPaused,
-                )
-            }
-            val selectAnswer = question.answer
-            if (selectAnswer is Answer.Select) {
-                SelectOptionsList(
-                    options = selectAnswer.options,
-                    basePath = state.extractedBasePath,
-                    compact = compact,
-                    bodySize = bodySize,
-                    revealCorrect = false,
-                )
+            // Content area fills remaining vertical space.
+            // Images are constrained to the available height so they never
+            // get cropped — landscape images fill the width, portrait images
+            // fill the height and are centred horizontally (no scrolling).
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                val availableHeight = maxHeight
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+                ) {
+                    question.displayContents(state.extractedBasePath).forEach { item ->
+                        when (item) {
+                            is QuestionDisplayItem.LocalImage,
+                            is QuestionDisplayItem.RemoteImage -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = availableHeight)
+                                ) {
+                                    RenderQuestionDisplayItem(
+                                        item = item,
+                                        compact = compact,
+                                        bodySize = bodySize,
+                                        onMediaFinished = onMediaFinished,
+                                        mediaStopSignal = state.mediaStopSignal,
+                                        mediaPaused = state.mediaPaused,
+                                    )
+                                }
+                            }
+                            else -> RenderQuestionDisplayItem(
+                                item = item,
+                                compact = compact,
+                                bodySize = bodySize,
+                                onMediaFinished = onMediaFinished,
+                                mediaStopSignal = state.mediaStopSignal,
+                                mediaPaused = state.mediaPaused,
+                            )
+                        }
+                    }
+                    if (selectAnswer is Answer.Select) {
+                        Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
+                        SelectOptionsList(
+                            options = selectAnswer.options,
+                            basePath = state.extractedBasePath,
+                            compact = compact,
+                            bodySize = bodySize,
+                            revealCorrect = false,
+                        )
+                    }
+                }
             }
         }
     }

@@ -81,7 +81,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                     BoardOverview(state, compact)
             }
             }
-            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, compact)
+            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, compact)
         }
     }
 }

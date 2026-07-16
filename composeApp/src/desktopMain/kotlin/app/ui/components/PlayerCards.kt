@@ -27,6 +27,7 @@ internal fun PlayerCards(
     activePlayerId: UUID?,
     answeringPlayerId: UUID?,
     skipVotePlayerIds: Set<UUID>,
+    failedBuzzPlayerIds: Set<UUID>,
     compact: Boolean,
 ) {
     Row(
@@ -38,15 +39,18 @@ internal fun PlayerCards(
         players.forEach { player ->
             val isAnswering = player.id == answeringPlayerId
             val isSkipping = player.id in skipVotePlayerIds
+            val isFailed = player.id in failedBuzzPlayerIds
             val isChoosing = player.id == activePlayerId
 
             val cardBg = when {
                 isAnswering -> Color(0xFF1E4D2B)
+                isFailed -> Color(0xFF4A1C24)
                 isSkipping -> Color(0xFF555555)
                 else -> Palette.DarkSurface
             }
             val nameColor = when {
                 isAnswering -> Color(0xFF5CCD8F)
+                isFailed -> Color(0xFFCC6666)
                 isChoosing -> Palette.AccentGold
                 else -> Color.White
             }

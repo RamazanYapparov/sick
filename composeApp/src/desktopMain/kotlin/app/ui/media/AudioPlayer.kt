@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import app.ui.theme.Palette
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -39,6 +40,7 @@ private fun formatMillis(ms: Double): String {
 fun AudioPlayer(
     uri: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     stopSignal: Int = 0,
     paused: Boolean = false,
     onFinished: () -> Unit = {},
@@ -105,29 +107,33 @@ fun AudioPlayer(
         tag = "AudioPlayer",
     )
 
+    val playerHeight = if (compact) 48.dp else 72.dp
+    val labelSize = if (compact) 14.sp else 20.sp
+    val timeSize = if (compact) 11.sp else 13.sp
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .background(Color(0xFF1A2A35)),
+            .height(playerHeight)
+            .background(Palette.MediaBg),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = if (compact) 10.dp else 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             val label = errorMessage ?: if (playing) "\u266B  Playing audio..." else "\u266B  Done"
             Text(
                 text = label,
-                fontSize = 20.sp,
+                fontSize = labelSize,
                 fontWeight = FontWeight.Medium,
-                color = if (errorMessage != null) Color.Red else app.ui.theme.Palette.AccentGold,
+                color = if (errorMessage != null) Color.Red else Palette.AccentGold,
             )
             if (totalMs > 0) {
                 Text(
                     text = "${formatMillis(currentMs)} / ${formatMillis(totalMs)}",
-                    fontSize = 13.sp,
-                    color = app.ui.theme.Palette.AccentGold.copy(alpha = 0.7f),
+                    fontSize = timeSize,
+                    color = Palette.AccentGold.copy(alpha = 0.7f),
                 )
             }
         }
@@ -135,11 +141,11 @@ fun AudioPlayer(
             (currentMs / totalMs).toFloat().coerceIn(0f, 1f)
         } else 0f
         Box(
-            modifier = Modifier.fillMaxWidth().height(4.dp).background(Color(0xFF0D1C24)),
+            modifier = Modifier.fillMaxWidth().height(4.dp).background(Palette.MediaTrack),
         ) {
             Box(
                 modifier = Modifier.fillMaxWidth(progressValue).fillMaxHeight()
-                    .background(app.ui.theme.Palette.AccentGold),
+                    .background(Palette.AccentGold),
             )
         }
     }

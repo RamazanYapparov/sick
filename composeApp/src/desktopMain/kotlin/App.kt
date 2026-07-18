@@ -1,6 +1,5 @@
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
 import app.ui.window.HostWindowContent
@@ -13,8 +12,10 @@ fun HostApp(controller: DesktopSessionController) {
         colors = MaterialTheme.colors.copy(
             primary = Palette.AccentBlue,
             secondary = Palette.AccentYellow,
-            surface = Color(0xFFF6F1E8),
-            background = Color(0xFFEDE3D1),
+            surface = Palette.ThemeSurface,
+            background = Palette.ThemeBackground,
+            onSurface = Palette.ThemeOnSurface,
+            onBackground = Palette.ThemeOnBackground,
         )
     ) {
         HostWindowContent(controller, controller.uiState)
@@ -25,12 +26,12 @@ fun HostApp(controller: DesktopSessionController) {
 fun SharedDisplayApp(state: DesktopUiState, onMediaFinished: () -> Unit = {}) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
-            primary = Color(0xFF184A45),
-            secondary = Color(0xFFE5B14C),
-            surface = Color(0xFF162C36),
-            background = Color(0xFF0E1A21),
-            onSurface = Color(0xFFF7F4ED),
-            onBackground = Color(0xFFF7F4ED),
+            primary = Palette.SharedPrimary,
+            secondary = Palette.SharedSecondary,
+            surface = Palette.ThemeSurface,
+            background = Palette.ThemeBackground,
+            onSurface = Palette.ThemeOnSurface,
+            onBackground = Palette.ThemeOnBackground,
         )
     ) {
         SharedDisplayScreen(state = state, compact = false, onMediaFinished = onMediaFinished)

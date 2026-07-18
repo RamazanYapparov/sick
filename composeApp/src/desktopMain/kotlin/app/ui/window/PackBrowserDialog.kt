@@ -73,7 +73,7 @@ internal fun PackBrowserDialog(
     ) {
         Card(
             modifier = Modifier.size(width = (Toolkit.getDefaultToolkit().screenSize.width * 0.8f).dp, height = 520.dp),
-            backgroundColor = Color(0xFFF6F1E8),
+            backgroundColor = Palette.ThemeSurface,
             shape = RoundedCornerShape(20.dp),
             elevation = 12.dp,
         ) {
@@ -99,7 +99,7 @@ internal fun PackBrowserDialog(
                             Text(
                                 "~${System.getProperty("user.home")}/Downloads",
                                 fontSize = 11.sp,
-                                color = Color(0xFFB0C4DE),
+                                color = Palette.InfoText,
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,10 +107,10 @@ internal fun PackBrowserDialog(
                                 onClick = onRefresh,
                                 enabled = !isScanning,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFF3A8AAA),
+                                    backgroundColor = Palette.ButtonAccent,
                                     contentColor = Color.White,
-                                    disabledBackgroundColor = Color(0xFF2D6A7A),
-                                    disabledContentColor = Color(0xFFA0C0D0),
+                                    disabledBackgroundColor = Palette.ButtonAccent.copy(alpha = 0.6f),
+                                    disabledContentColor = Palette.ButtonDisabledContent,
                                 ),
                                 modifier = Modifier.height(34.dp),
                                 shape = RoundedCornerShape(8.dp),
@@ -135,7 +135,7 @@ internal fun PackBrowserDialog(
                             Button(
                                 onClick = onBrowseFiles,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFF3A8AAA),
+                                    backgroundColor = Palette.ButtonAccent,
                                     contentColor = Color.White,
                                 ),
                                 modifier = Modifier.height(34.dp),
@@ -174,13 +174,13 @@ internal fun PackBrowserDialog(
                                 "No packs found",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF555555),
+                                color = Palette.ThemeOnSurface.copy(alpha = 0.7f),
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "Place .siq files in ~/Downloads or use Browse Files to locate one.",
                                 fontSize = 13.sp,
-                                color = Color(0xFF777777),
+                                color = Palette.ThemeOnSurface.copy(alpha = 0.5f),
                             )
                         }
                     }
@@ -215,7 +215,7 @@ private fun PackRow(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        backgroundColor = Color.White,
+        backgroundColor = Palette.DarkSurface,
         shape = RoundedCornerShape(14.dp),
         elevation = 2.dp,
     ) {
@@ -230,7 +230,7 @@ private fun PackRow(
                         pack.packName,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A2E),
+                        color = Palette.ThemeOnSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -238,13 +238,13 @@ private fun PackRow(
                         Text(
                             "by ${pack.author}",
                             fontSize = 12.sp,
-                            color = Color(0xFF666666),
+                            color = Palette.SecondaryText,
                         )
                     }
                     Text(
                         "${pack.rounds.size} round(s), ${pack.rounds.sumOf { r -> r.themes.sumOf { t -> t.questions.size } }} questions",
                         fontSize = 11.sp,
-                        color = Color(0xFF888888),
+                        color = Palette.SecondaryText,
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -290,7 +290,7 @@ private fun PackRow(
 private fun PeekRoundSection(round: ScannedRoundInfo) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = Color(0xFFF0F4F8),
+        backgroundColor = Palette.NestedCardBg,
         shape = RoundedCornerShape(10.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
@@ -301,7 +301,7 @@ private fun PeekRoundSection(round: ScannedRoundInfo) {
                     round.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A2E),
+                    color = Palette.ThemeOnSurface,
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -325,7 +325,7 @@ private fun PeekThemeSection(theme: ScannedThemeInfo) {
             Text(
                 theme.name,
                 fontSize = 13.sp,
-                color = Color(0xFF333333),
+                color = Palette.SubtleText,
             )
         }
         FlowRow(
@@ -345,7 +345,7 @@ private fun QuestionPriceChip(price: Int) {
     Box(
         modifier = Modifier
             .background(
-                color = Color(0xFFE8EDF2),
+                color = Palette.ChipBg,
                 shape = RoundedCornerShape(6.dp),
             )
             .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -354,7 +354,7 @@ private fun QuestionPriceChip(price: Int) {
             "$price",
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF336688),
+            color = Palette.ChipText,
         )
     }
 }
@@ -366,11 +366,11 @@ private fun RoundTypeBadge(type: String) {
         else -> "Simple"
     }
     val bgColor = when (type.lowercase()) {
-        "final" -> Color(0xFFFF6B35).copy(alpha = 0.2f)
+        "final" -> Palette.FinalBadge.copy(alpha = 0.2f)
         else -> Palette.AccentBlue.copy(alpha = 0.15f)
     }
     val textColor = when (type.lowercase()) {
-        "final" -> Color(0xFFFF6B35)
+        "final" -> Palette.FinalBadge
         else -> Palette.AccentBlue
     }
     Box(

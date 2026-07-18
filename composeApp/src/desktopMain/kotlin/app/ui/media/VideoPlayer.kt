@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import app.ui.theme.Palette
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -268,20 +269,20 @@ fun VideoPlayer(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color(0xAA000000))
+                    .background(Palette.VideoOverlay)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp)
-                        .background(Color(0x44FFFFFF)),
+                        .background(Palette.ProgressTrack),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress)
                             .fillMaxHeight()
-                            .background(app.ui.theme.Palette.AccentGold),
+                            .background(Palette.AccentGold),
                     )
                 }
                 Spacer(Modifier.height(4.dp))

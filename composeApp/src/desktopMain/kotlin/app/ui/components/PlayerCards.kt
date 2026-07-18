@@ -43,19 +43,19 @@ internal fun PlayerCards(
             val isChoosing = player.id == activePlayerId
 
             val cardBg = when {
-                isAnswering -> Color(0xFF1E4D2B)
-                isFailed -> Color(0xFF4A1C24)
-                isSkipping -> Color(0xFF555555)
+                isAnswering -> Palette.PlayerAnswering
+                isFailed -> Palette.PlayerFailed
+                isSkipping -> Palette.PlayerSkipped
                 else -> Palette.DarkSurface
             }
             val nameColor = when {
-                isAnswering -> Color(0xFF5CCD8F)
-                isFailed -> Color(0xFFCC6666)
+                isAnswering -> Palette.PlayerAnsweringText
+                isFailed -> Palette.PlayerFailedText
                 isChoosing -> Palette.AccentGold
                 else -> Color.White
             }
             val nameFontWeight = if (isChoosing) FontWeight.Bold else FontWeight.Normal
-            val scoreColor = if (isAnswering) Color(0xFF5CCD8F) else Palette.AccentGold
+            val scoreColor = if (isAnswering) Palette.PlayerAnsweringText else Palette.AccentGold
             val textSize = if (compact) 12.sp else 16.sp
 
             Card(

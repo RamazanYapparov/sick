@@ -50,7 +50,7 @@ internal fun QuestionBoard(
             Button(
                 onClick = onShowCompletedToggle,
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color(0xFFB3AA9E),
+                    backgroundColor = Palette.QuestionButtonColor,
                     contentColor = Color.White,
                 ),
             ) {
@@ -60,7 +60,7 @@ internal fun QuestionBoard(
         visibleThemes.forEach { theme ->
             Card(
                 modifier = if (fillHeight) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth(),
-                backgroundColor = Color(0xFFE9DDBE),
+                backgroundColor = Palette.ThemeCardBg,
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(
@@ -73,7 +73,7 @@ internal fun QuestionBoard(
                     Text(
                         theme.name,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2B2B2B),
+                        color = Palette.ThemeNameColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -86,9 +86,9 @@ internal fun QuestionBoard(
                                 onClick = { onQuestionClick(question.id) },
                                 enabled = questionEnabled,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = if (question.played) Color(0xFFB3AA9E) else Palette.AccentBlue,
+                                    backgroundColor = if (question.played) Palette.QuestionButtonColor else Palette.AccentBlue,
                                     contentColor = Color.White,
-                                    disabledBackgroundColor = if (question.played) Color(0xFF8B8378) else Palette.AccentBlue,
+                                    disabledBackgroundColor = if (question.played) Palette.QuestionButtonDisabled else Palette.AccentBlue,
                                 ),
                             ) {
                                 Text(question.price.toString())

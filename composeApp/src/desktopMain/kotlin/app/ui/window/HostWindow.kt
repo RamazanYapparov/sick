@@ -2,6 +2,7 @@
 
 package app.ui.window
 
+import app.ui.components.QuestionBoard
 import app.ui.components.SectionCard
 import app.ui.components.PlayerEditorRow
 import app.ui.components.PhaseControls
@@ -60,10 +61,53 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 modifier = Modifier.weight(1.2f).fillMaxHeight().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // Question board at the top so it's immediately visible
+                if (state.phase == GamePhase.ChoosingQuestion) {
+                    SectionCard("Question Board") {
+                        QuestionBoard(
+                            themes = state.boardThemes,
+                            enabled = true,
+                            onQuestionClick = controller::selectQuestion,
+                            showCompleted = state.showCompleted,
+                            onShowCompletedToggle = controller::toggleShowCompleted,
+                        )
+                    }
+                }
+
+                // Host answer right below the question board
+                HostAnswerCard(state.currentQuestion?.answer)
+
+                PhaseControls(state = state, controller = controller)
+
+                SectionCard("Players") {
+                    if (state.players.isEmpty()) {
+                        Text("No players yet. Players join via the buzzer URL.")
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            state.players.forEach { player ->
+                                val scoreKey = player.id.toString()
+                                val scoreValue = scoreDrafts.getOrPut(scoreKey) { "100" }
+                                val playerBg = when {
+                                    player.id in state.failedBuzzPlayerIds -> Palette.PlayerFailed
+                                    player.id in state.skipVotePlayerIds -> Palette.PlayerSkipped
+                                    else -> Palette.DarkSurface
+                                }
+                                PlayerEditorRow(
+                                    player = player,
+                                    scoreDelta = scoreValue,
+                                    onScoreChange = { scoreDrafts[scoreKey] = it },
+                                    onAdjustScore = { controller.adjustScore(player.id, it) },
+                                    backgroundColor = playerBg,
+                                )
+                            }
+                        }
+                    }
+                }
+
                 SectionCard("Session") {
                     Text("Pack: ${state.packName}", fontWeight = FontWeight.Bold)
                     if (state.loadedPackPath != null) {
-                        Text(state.loadedPackPath, fontSize = 12.sp, color = Color(0xFF555555))
+                        Text(state.loadedPackPath, fontSize = 12.sp, color = Palette.SecondaryText)
                     }
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -90,29 +134,6 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                     state.infoMessage?.let { Text(it, color = Palette.Success) }
                     state.errorMessage?.let { Text(it, color = Palette.Error) }
                 }
-
-                SectionCard("Players") {
-                    if (state.players.isEmpty()) {
-                        Text("No players yet. Players join via the buzzer URL.")
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.players.forEach { player ->
-                                val scoreKey = player.id.toString()
-                                val scoreValue = scoreDrafts.getOrPut(scoreKey) { "100" }
-                                PlayerEditorRow(
-                                    player = player,
-                                    scoreDelta = scoreValue,
-                                    onScoreChange = { scoreDrafts[scoreKey] = it },
-                                    onAdjustScore = { controller.adjustScore(player.id, it) },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                PhaseControls(state = state, controller = controller)
-
-                HostAnswerCard(state.currentQuestion?.answer)
             }
 
             Column(
@@ -126,8 +147,8 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 )
                 Box(
                     modifier = Modifier.fillMaxSize()
-                        .border(1.dp, Color(0xFFB7AA93), RoundedCornerShape(20.dp))
-                        .background(Color(0xFF1A2B35), RoundedCornerShape(20.dp))
+                        .border(1.dp, Palette.BorderColor, RoundedCornerShape(20.dp))
+                        .background(Palette.PanelBackground, RoundedCornerShape(20.dp))
                         .padding(12.dp),
                 ) {
                     if (state.currentQuestion != null) {
@@ -161,7 +182,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                         }
                     } else {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No active question", color = Color(0xFF7A9BAA))
+                            Text("No active question", color = Palette.MutedText)
                         }
                     }
                 }

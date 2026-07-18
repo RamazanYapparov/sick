@@ -127,13 +127,13 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                 Text(
                     text = "Scan the QR code or enter the connection URL in your browser to join as a player.",
                     fontSize = if (compact) 11.sp else 16.sp,
-                    color = Color(0xFFB0C4DE)
+                    color = Palette.InfoText
                 )
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF0E1A21), RoundedCornerShape(8.dp))
+                        .background(Palette.ThemeBackground, RoundedCornerShape(8.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
@@ -162,7 +162,7 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                     QrCode(
                         text = state.serverUrl,
                         modifier = Modifier.fillMaxSize().padding(12.dp),
-                        fgColor = Color(0xFF0E1A21),
+                        fgColor = Palette.ThemeBackground,
                         bgColor = Color.White
                     )
                 }
@@ -215,16 +215,16 @@ internal fun SelectOptionsList(
         options.forEach { option ->
             val highlight = revealCorrect && option.correct
             val confirmed = revealCorrect && !option.correct
-            val rowBg = if (highlight) Color(0xFF1E4D2B) else Color(0x225F7D8D)
+            val rowBg = if (highlight) Palette.PlayerAnswering else Palette.SelectRowBg
             val textColor = when {
-                highlight -> Color(0xFF5CCD8F)
-                confirmed -> Color(0xFFAAAAAA)
+                highlight -> Palette.PlayerAnsweringText
+                confirmed -> Palette.ConfirmedText
                 else -> Color.White
             }
-            val letterBg = if (highlight) Color(0xFF1E4D2B) else Color(0x335F7D8D)
+            val letterBg = if (highlight) Palette.PlayerAnswering else Palette.SelectLetterBg
             val letterColor = when {
-                highlight -> Color(0xFF5CCD8F)
-                confirmed -> Color(0xFFAAAAAA)
+                highlight -> Palette.PlayerAnsweringText
+                confirmed -> Palette.ConfirmedText
                 else -> Palette.AccentGold
             }
             val textFontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal
@@ -297,18 +297,18 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                         text = "${state.answerTimerRemaining}",
                         fontSize = timerSize,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFF36C5B),
+                        color = Palette.TimerColor,
                     )
                     else -> if (state.timerRemaining > 0) Text(
                         text = "${state.timerRemaining}",
                         fontSize = timerSize,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFF36C5B),
+                        color = Palette.TimerColor,
                     )
                 }
             }
 
-            Divider(color = Color(0x335F7D8D))
+            Divider(color = Palette.DividerColor)
 
             // Content area fills remaining vertical space.
             // Images are constrained to the available height so they never

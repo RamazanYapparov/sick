@@ -1,5 +1,6 @@
 [versions]
 compose-plugin = "1.6.11"
+jackson = "2.17.2"
 jna = "5.13.0"
 junit = "4.13.2"
 kotlin = "2.2.0"
@@ -9,6 +10,8 @@ zxing = "3.5.3"
 
 [libraries]
 arrow-core = { module = "io.arrow-kt:arrow-core", version = "1.2.4" }
+jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
+jackson-module-parameter-names = { module = "com.fasterxml.jackson.module:jackson-module-parameter-names", version.ref = "jackson" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

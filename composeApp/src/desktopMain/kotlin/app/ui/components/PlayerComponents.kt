@@ -48,7 +48,7 @@ internal fun PlayerChipRow(
                 enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = if (player.id == activePlayerId) Palette.AccentYellow else Palette.AccentBlue,
-                    contentColor = if (player.id == activePlayerId) Color(0xFF1B1B1B) else Color.White,
+                    contentColor = if (player.id == activePlayerId) Palette.ActivePlayerText else Color.White,
                 ),
             ) {
                 Text(player.name)
@@ -63,9 +63,10 @@ internal fun PlayerEditorRow(
     scoreDelta: String,
     onScoreChange: (String) -> Unit,
     onAdjustScore: (Int) -> Unit,
+    backgroundColor: Color = Palette.DarkSurface,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Card(backgroundColor = Color.White, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
+    Card(backgroundColor = backgroundColor, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!expanded) {
                 Row(

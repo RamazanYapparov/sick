@@ -91,22 +91,22 @@ internal fun AnswerPanel(
                 fontWeight = FontWeight.Bold,
                 color = Palette.AccentGold,
             )
-            Divider(color = Color(0x335F7D8D))
+            Divider(color = Palette.DividerColor)
             when (answer) {
                 is Answer.Simple -> {
                     answer.right.forEach { right ->
-                        Text(right, fontSize = bodySize, color = Color(0xFF5CCD8F), fontWeight = FontWeight.Bold)
+                        Text(right, fontSize = bodySize, color = Palette.PlayerAnsweringText, fontWeight = FontWeight.Bold)
                     }
                     if (answer.wrong.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
                         Text("Also accepted:", fontSize = bodySize, color = Color.White)
                         answer.wrong.forEach { wrong ->
-                            Text(wrong, fontSize = bodySize, color = Color(0xFFAAAAAA))
+                            Text(wrong, fontSize = bodySize, color = Palette.ConfirmedText)
                         }
                     }
                     if (answer.contents.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Divider(color = Color(0x335F7D8D))
+                        Divider(color = Palette.DividerColor)
                         displayContents(answer.contents, basePath).forEach { item ->
                             RenderQuestionDisplayItem(
                                 item = item,
@@ -231,29 +231,23 @@ internal fun RenderQuestionDisplayItem(
             }
         }
         is QuestionDisplayItem.LocalAudio -> {
-            if (compact) {
-                Text("\u266B Audio", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-                AudioPlayer(
-                    uri = uri,
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
+            val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
+            AudioPlayer(
+                uri = uri,
+                compact = compact,
+                stopSignal = mediaStopSignal,
+                paused = mediaPaused,
+                onFinished = onMediaFinished,
+            )
         }
         is QuestionDisplayItem.RemoteAudio -> {
-            if (compact) {
-                Text("\u266B Audio", fontSize = bodySize, color = Palette.AccentGold)
-            } else {
-                AudioPlayer(
-                    uri = item.url.toString(),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
+            AudioPlayer(
+                uri = item.url.toString(),
+                compact = compact,
+                stopSignal = mediaStopSignal,
+                paused = mediaPaused,
+                onFinished = onMediaFinished,
+            )
         }
     }
 }

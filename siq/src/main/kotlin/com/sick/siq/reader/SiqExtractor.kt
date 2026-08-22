@@ -12,7 +12,18 @@ import kotlin.io.path.createDirectory
 import kotlin.io.path.exists
 import kotlin.io.path.outputStream
 
-class SiqExtractor(private val source: String, private val destination: String) {
+data class SiqExtractionLimits(
+    val maxEntries: Int = 10_000,
+    val maxEntryBytes: Long = 512L * 1024 * 1024,
+    val maxTotalBytes: Long = 2L * 1024 * 1024 * 1024,
+    val maxCompressionRatio: Double = 200.0,
+)
+
+class SiqExtractor(
+    private val source: String,
+    private val destination: String,
+    private val limits: SiqExtractionLimits = SiqExtractionLimits(),
+) {
     private lateinit var tempDir: Path
 
     init {
@@ -31,17 +42,36 @@ class SiqExtractor(private val source: String, private val destination: String) 
         tempDir = Files.createTempDirectory("tmp")
         println("Created temp directory $tempDir")
         ZipFile(source).use { zf ->
+            var entryCount = 0
+            var totalBytes = 0L
             zf.entries().asSequence().forEach { entry ->
+                entryCount++
+                require(entryCount <= limits.maxEntries) {
+                    "SIQ archive contains too many entries"
+                }
+                entry.validateDeclaredSize()
                 if (entry.hasDirectory) {
                     tempDir.resolve(entry.directoryName).createIfNotExists()
                 }
-                entry.write(zf, tempDir)
+                totalBytes = entry.write(zf, tempDir, totalBytes)
             }
         }
         return tempDir
     }
 
-    private fun ZipEntry.write(file: ZipFile, destination: Path) {
+    private fun ZipEntry.validateDeclaredSize() {
+        if (size >= 0) {
+            require(size <= limits.maxEntryBytes) { "SIQ entry exceeds size limit: $name" }
+        }
+        if (size > 0 && compressedSize > 0) {
+            require(size.toDouble() / compressedSize <= limits.maxCompressionRatio) {
+                "SIQ entry exceeds compression ratio limit: $name"
+            }
+        }
+    }
+
+    private fun ZipEntry.write(file: ZipFile, destination: Path, totalBytesBeforeEntry: Long): Long {
+        var entryBytes = 0L
         file.getInputStream(this).use { inputStream ->
             name.takeIf { "/" in name }
                 ?.split("/")?.first()
@@ -52,10 +82,18 @@ class SiqExtractor(private val source: String, private val destination: String) 
                 val bytesIn = ByteArray(BUFFER_SIZE)
                 var read: Int
                 while (inputStream.read(bytesIn).also { read = it } != -1) {
+                    entryBytes += read
+                    require(entryBytes <= limits.maxEntryBytes) {
+                        "SIQ entry exceeds size limit: $name"
+                    }
+                    require(totalBytesBeforeEntry + entryBytes <= limits.maxTotalBytes) {
+                        "SIQ archive exceeds total extraction size limit"
+                    }
                     outputStream.write(bytesIn, 0, read)
                 }
             }
         }
+        return totalBytesBeforeEntry + entryBytes
     }
 
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: JPG",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000001",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "image", "jpg"],
+  "rounds": [{
+    "name": "JPG",
+    "themes": [{
+      "name": "Проверка JPG",
+      "questions": [{
+        "price": 100,
+        "content": [
+          { "type": "text", "text": "Должно отобразиться тестовое изображение JPG 640×360." },
+          { "type": "image", "file": "images/jpg/siq-test.jpg" }
+        ],
+        "right": ["JPG отображается"]
+      }]
+    }]
+  }]
+}

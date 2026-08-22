@@ -1,0 +1,24 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: GIF",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000005",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "image", "gif", "animation"],
+  "rounds": [{
+    "name": "GIF",
+    "themes": [{
+      "name": "Проверка GIF",
+      "questions": [{
+        "price": 100,
+        "content": [
+          { "type": "text", "text": "Должна воспроизводиться секундная GIF-анимация 320×180." },
+          { "type": "image", "file": "images/gif/siq-test.gif" }
+        ],
+        "right": ["GIF анимируется"]
+      }]
+    }]
+  }]
+}

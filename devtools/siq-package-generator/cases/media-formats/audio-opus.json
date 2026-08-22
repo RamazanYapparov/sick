@@ -1,0 +1,26 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: Opus",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000009",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "audio", "opus"],
+  "rounds": [{
+    "name": "Opus",
+    "themes": [{
+      "name": "Проверка Opus",
+      "questions": [{
+        "price": 100,
+        "content": [{
+          "type": "audio",
+          "file": "audio/opus/siq-test-tone.opus",
+          "waitForFinish": true
+        }],
+        "answerContent": [{ "type": "text", "text": "Opus завершён" }],
+        "right": ["Opus воспроизводится"]
+      }]
+    }]
+  }]
+}

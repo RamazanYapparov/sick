@@ -1,0 +1,21 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: HTML",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000011",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "html"],
+  "rounds": [{
+    "name": "HTML",
+    "themes": [{
+      "name": "Проверка HTML",
+      "questions": [{
+        "price": 100,
+        "content": [{ "type": "html", "file": "html/html/siq-test.html" }],
+        "right": ["HTML отображается"]
+      }]
+    }]
+  }]
+}

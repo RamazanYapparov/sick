@@ -1,0 +1,24 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: AVIF",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000007",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "image", "avif"],
+  "rounds": [{
+    "name": "AVIF",
+    "themes": [{
+      "name": "Проверка AVIF",
+      "questions": [{
+        "price": 100,
+        "content": [
+          { "type": "text", "text": "Должно отобразиться тестовое изображение AVIF 640×360." },
+          { "type": "image", "file": "images/avif/siq-test.avif" }
+        ],
+        "right": ["AVIF отображается"]
+      }]
+    }]
+  }]
+}

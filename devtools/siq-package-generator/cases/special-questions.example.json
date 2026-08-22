@@ -1,0 +1,59 @@
+{
+  "$schema": "../recipe.schema.json",
+  "name": "Special questions example",
+  "author": "sick development tools",
+  "rounds": [
+    {
+      "name": "Специальные вопросы",
+      "themes": [
+        {
+          "name": "Типы вопросов",
+          "questions": [
+            {
+              "price": 100,
+              "type": "secret",
+              "content": [
+                { "type": "text", "text": "Вопрос с секретом" }
+              ],
+              "parameters": {
+                "selectionMode": { "type": "simple", "value": "exceptCurrent" },
+                "price": {
+                  "type": "numberSet",
+                  "minimum": 100,
+                  "maximum": 500,
+                  "step": 100
+                },
+                "theme": { "type": "simple", "value": "Новая тема" }
+              },
+              "right": ["Ответ"]
+            },
+            {
+              "price": 200,
+              "content": [
+                { "type": "text", "text": "Выберите правильный вариант" }
+              ],
+              "parameters": {
+                "answerType": { "type": "simple", "value": "select" },
+                "answerOptions": {
+                  "type": "group",
+                  "parameters": {
+                    "optionA": {
+                      "type": "content",
+                      "content": [{ "type": "text", "text": "Вариант A" }]
+                    },
+                    "optionB": {
+                      "type": "content",
+                      "content": [{ "type": "text", "text": "Вариант B" }]
+                    }
+                  }
+                }
+              },
+              "right": ["optionA"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

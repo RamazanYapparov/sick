@@ -1,0 +1,42 @@
+{
+  "$schema": "../recipe.schema.json",
+  "name": "Media example",
+  "author": "sick development tools",
+  "difficulty": 5,
+  "language": "ru",
+  "rounds": [
+    {
+      "name": "Медиа",
+      "themes": [
+        {
+          "name": "Разные форматы",
+          "questions": [
+            {
+              "price": 100,
+              "content": [
+                { "type": "text", "text": "Что изображено?" },
+                { "type": "image", "file": "images/example.png" }
+              ],
+              "right": ["Пример"]
+            },
+            {
+              "price": 200,
+              "content": [
+                {
+                  "type": "audio",
+                  "file": "audio/example.mp3",
+                  "waitForFinish": true
+                }
+              ],
+              "answerContent": [
+                { "type": "video", "file": "video/answer.mp4" }
+              ],
+              "right": ["Пример аудио"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

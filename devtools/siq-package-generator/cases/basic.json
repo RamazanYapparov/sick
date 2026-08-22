@@ -1,0 +1,41 @@
+{
+  "$schema": "../recipe.schema.json",
+  "name": "Development smoke package",
+  "author": "sick development tools",
+  "id": "fd376ba4-0afc-4774-86f7-2ad9245db405",
+  "date": "22.08.2026",
+  "difficulty": 3,
+  "language": "ru",
+  "tags": ["development", "smoke"],
+  "rounds": [
+    {
+      "name": "Раунд 1",
+      "type": "standard",
+      "themes": [
+        {
+          "name": "Проверка текста",
+          "questions": [
+            {
+              "price": 100,
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Тестовый вопрос: два плюс два?"
+                }
+              ],
+              "answerContent": [
+                {
+                  "type": "text",
+                  "text": "Правильный ответ — четыре."
+                }
+              ],
+              "right": ["Четыре", "4"],
+              "wrong": ["Пять"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

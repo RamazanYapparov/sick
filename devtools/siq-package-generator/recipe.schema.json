@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sick.local/schemas/siq-recipe.schema.json",
+  "title": "SIQ development package recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "author", "rounds"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "author": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "date": { "type": "string", "minLength": 1 },
+    "difficulty": { "type": "integer", "minimum": 0, "maximum": 10, "default": 5 },
+    "language": { "type": "string", "default": "ru" },
+    "publisher": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "rounds": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/round" }
+    }
+  },
+  "$defs": {
+    "round": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "themes"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["standard", "standart", "table", "final", "themeList"],
+          "default": "standard"
+        },
+        "themes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/theme" }
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "questions"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/question" }
+        }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["price", "content", "right"],
+      "properties": {
+        "price": { "type": "integer", "minimum": 0 },
+        "type": { "type": "string" },
+        "content": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/content" }
+        },
+        "answerContent": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/content" },
+          "default": []
+        },
+        "parameters": {
+          "type": "object",
+          "propertyNames": {
+            "not": { "enum": ["question", "answer"] }
+          },
+          "additionalProperties": { "$ref": "#/$defs/parameter" },
+          "default": {}
+        },
+        "right": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "wrong": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["text", "image", "audio", "video", "html"] },
+        "text": { "type": "string" },
+        "file": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" },
+        "packageName": { "type": "string", "minLength": 1 },
+        "placement": { "enum": ["screen", "replic", "background"] },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "waitForFinish": { "type": "boolean", "default": true }
+      },
+      "oneOf": [
+        {
+          "properties": { "type": { "const": "text" } },
+          "required": ["text"],
+          "not": { "anyOf": [{ "required": ["file"] }, { "required": ["url"] }] }
+        },
+        {
+          "properties": { "type": { "enum": ["image", "audio", "video", "html"] } },
+          "oneOf": [{ "required": ["file"] }, { "required": ["url"] }],
+          "not": { "required": ["text"] }
+        }
+      ]
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["simple", "content", "group", "numberSet"] },
+        "value": { "type": "string" },
+        "isRef": { "type": "boolean", "default": false },
+        "content": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/content" }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/parameter" }
+        },
+        "minimum": { "type": "integer" },
+        "maximum": { "type": "integer" },
+        "step": { "type": "integer", "minimum": 0, "default": 0 }
+      },
+      "oneOf": [
+        {
+          "properties": { "type": { "const": "simple" } },
+          "required": ["value"]
+        },
+        {
+          "properties": { "type": { "const": "content" } },
+          "required": ["content"]
+        },
+        {
+          "properties": { "type": { "const": "group" } },
+          "required": ["parameters"]
+        },
+        {
+          "properties": { "type": { "const": "numberSet" } },
+          "required": ["minimum", "maximum"]
+        }
+      ]
+    }
+  }
+}

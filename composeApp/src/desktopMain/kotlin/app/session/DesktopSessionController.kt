@@ -36,8 +36,6 @@ import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.EventQueue
@@ -69,8 +67,6 @@ class DesktopSessionController(
     private var showCompleted = false
 
     private var stateChangeCount = 0L
-    private var lastStateChangeMs = 0L
-    private var watchdogJob: Job? = null
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
@@ -79,11 +75,9 @@ class DesktopSessionController(
         bindEngine(engine)
         server.start()
         publishState()
-        startWatchdog()
     }
 
     fun dispose() {
-        watchdogJob?.cancel()
         timerOrchestrator.stop()
         server.stop()
     }
@@ -319,7 +313,6 @@ class DesktopSessionController(
 
     private fun publishState() {
         stateChangeCount++
-        lastStateChangeMs = System.currentTimeMillis()
         if (!EventQueue.isDispatchThread()) {
             logger.warn { "publishState() called from non-EDT thread: ${Thread.currentThread().name} (count=$stateChangeCount)" }
         }
@@ -337,43 +330,6 @@ class DesktopSessionController(
             scannedPacks = scannedPacks,
             isScanningPacks = isScanningPacks,
         )
-    }
-
-    private fun startWatchdog() {
-        watchdogJob?.cancel()
-        watchdogJob = scope.launch {
-            while (true) {
-                delay(10_000)
-                val now = System.currentTimeMillis()
-                val elapsed = now - lastStateChangeMs
-                val phaseName = try { engine.phase.name } catch (e: Exception) { "UNKNOWN" }
-                val thread = Thread.currentThread().name
-                if (elapsed > 15_000) {
-                    logger.warn {
-                        "watchdog: engine alive phase=$phaseName, thread=$thread, " +
-                        "lastStateChange=${elapsed}ms ago, stateChanges=$stateChangeCount"
-                    }
-                }
-                if (elapsed > 60_000) {
-                    logger.error {
-                        "watchdog: SUSPECTED FREEZE — no state change for ${elapsed}ms. " +
-                        "Dumping threads:\n${dumpThreads()}"
-                    }
-                }
-            }
-        }
-    }
-
-    private fun dumpThreads(): String {
-        val sb = StringBuilder()
-        val stackTraces = Thread.getAllStackTraces()
-        stackTraces.forEach { (thread, stack) ->
-            sb.append("\n--- ${thread.name} (${thread.state}) ---\n")
-            stack.forEach { element ->
-                sb.append("  at $element\n")
-            }
-        }
-        return sb.toString()
     }
 
     private fun setError(message: String) {

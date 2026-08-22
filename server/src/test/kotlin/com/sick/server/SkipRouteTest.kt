@@ -106,6 +106,20 @@ class SkipRouteTest {
     }
 
     @Test
+    fun `POST skip rejects a valid UUID that does not belong to a player`() = testApplication {
+        val (engine, _) = engineAtShowingQuestion()
+        application { installSkipRoute(engine) { true } }
+
+        val response = client.submitForm(
+            url = "/skip",
+            formParameters = Parameters.build { append("playerId", UUID.randomUUID().toString()) },
+        )
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+    }
+
+    @Test
     fun `POST skip returns 400 when the engine rejects the event`() = testApplication {
         val pack = Package(name = "T", logo = "", tags = emptyList(), author = "", rounds = emptyList())
         val engine = GameEngine(pack)

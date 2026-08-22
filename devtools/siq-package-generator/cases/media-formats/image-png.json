@@ -1,0 +1,24 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: PNG",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000004",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "image", "png"],
+  "rounds": [{
+    "name": "PNG",
+    "themes": [{
+      "name": "Проверка PNG",
+      "questions": [{
+        "price": 100,
+        "content": [
+          { "type": "text", "text": "Должно отобразиться тестовое изображение PNG 640×360." },
+          { "type": "image", "file": "images/png/siq-test.png" }
+        ],
+        "right": ["PNG отображается"]
+      }]
+    }]
+  }]
+}

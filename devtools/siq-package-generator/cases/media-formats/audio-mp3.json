@@ -1,0 +1,26 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: MP3",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000008",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "audio", "mp3"],
+  "rounds": [{
+    "name": "MP3",
+    "themes": [{
+      "name": "Проверка MP3",
+      "questions": [{
+        "price": 100,
+        "content": [{
+          "type": "audio",
+          "file": "audio/mp3/siq-test-tone.mp3",
+          "waitForFinish": true
+        }],
+        "answerContent": [{ "type": "text", "text": "MP3 завершён" }],
+        "right": ["MP3 воспроизводится"]
+      }]
+    }]
+  }]
+}

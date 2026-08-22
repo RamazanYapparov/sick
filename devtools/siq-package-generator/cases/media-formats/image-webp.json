@@ -1,0 +1,24 @@
+{
+  "$schema": "../../recipe.schema.json",
+  "name": "Media format test: WebP",
+  "author": "sick development tools",
+  "id": "c72d8a10-4e06-4a38-9b20-000000000006",
+  "date": "22.08.2026",
+  "difficulty": 1,
+  "language": "ru",
+  "tags": ["media-format", "image", "webp"],
+  "rounds": [{
+    "name": "WebP",
+    "themes": [{
+      "name": "Проверка WebP",
+      "questions": [{
+        "price": 100,
+        "content": [
+          { "type": "text", "text": "Должно отобразиться тестовое изображение WebP 640×360." },
+          { "type": "image", "file": "images/webp/siq-test.webp" }
+        ],
+        "right": ["WebP отображается"]
+      }]
+    }]
+  }]
+}

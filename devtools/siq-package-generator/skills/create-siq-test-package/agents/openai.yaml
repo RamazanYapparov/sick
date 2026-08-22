@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create SIQ Test Package"
+  short_description: "Build SIQ packages for focused test scenarios"
+  default_prompt: "Use $create-siq-test-package to create and validate an SIQ package for this test scenario."

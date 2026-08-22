@@ -156,6 +156,9 @@ class GameEngine(pack: Package) {
             is QuestionRevealed -> _state
 
             is PlayerBuzzed -> {
+                ensure(_state.players.any { it.id == event.playerId }) {
+                    GameError.PlayerError(com.sick.service.PlayerError.NotFound(event.playerId))
+                }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 _state.copy(
@@ -165,6 +168,9 @@ class GameEngine(pack: Package) {
             }
 
             is PlayerSkipped -> {
+                ensure(_state.players.any { it.id == event.playerId }) {
+                    GameError.PlayerError(com.sick.service.PlayerError.NotFound(event.playerId))
+                }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 val newSkipVotes = _state.skipVotePlayerIds + event.playerId

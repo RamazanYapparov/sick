@@ -105,6 +105,21 @@ class BuzzRouteTest {
     }
 
     @Test
+    fun `POST buzz rejects a valid UUID that does not belong to a player`() = testApplication {
+        val (engine, _) = engineAtShowingQuestion()
+        application { installBuzzRoute(engine) { true } }
+
+        val response = client.submitForm(
+            url = "/buzz",
+            formParameters = Parameters.build { append("playerId", UUID.randomUUID().toString()) },
+        )
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertNull(engine.state.answeringPlayerId)
+        assertEquals(com.sick.state.GamePhase.ShowingQuestion, engine.phase)
+    }
+
+    @Test
     fun `POST buzz returns 400 when game is not in ShowingQuestion phase`() = testApplication {
         val pack = Package(name = "T", logo = "", tags = emptyList(), author = "", rounds = emptyList())
         val engine = GameEngine(pack)

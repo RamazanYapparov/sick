@@ -214,14 +214,20 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       btn.disabled = true;
       err.textContent = '';
 
+      const tokenKey = 'sick.reconnectToken.' + name;
+      const savedToken = localStorage.getItem(tokenKey);
+      const form = new URLSearchParams({ name: name });
+      if (savedToken) form.set('reconnectToken', savedToken);
+
       fetch('/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'name=' + encodeURIComponent(name)
+        body: form.toString()
       }).then(function(response) {
         if (response.ok) {
           return response.json().then(function(data) {
             playerId = data.playerId;
+            localStorage.setItem(tokenKey, data.reconnectToken);
             isInGame = true;
             document.querySelector('main').style.display = 'none';
             document.getElementById('buzz-section').style.display = 'flex';

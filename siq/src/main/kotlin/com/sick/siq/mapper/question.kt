@@ -2,7 +2,7 @@ package com.sick.com.sick.siq.mapper
 
 import com.sick.model.*
 import com.sick.siq.xml.model.Item
-import java.net.URL
+import java.net.URI
 import com.sick.siq.xml.model.NumberSet as XmlNumberSet
 import com.sick.siq.xml.model.Question as XmlQuestion
 
@@ -65,7 +65,11 @@ fun Item.toContentOrNull(): Content? = if (type == null || type == "say") {
     if (isRef == "True" || rawValue.startsWith("@")) {
         Content.Media.FileRef(mediaType, rawValue.removePrefix("@"))
     } else {
-        Content.Media.FileUrl(mediaType, URL(rawValue))
+        val url = URI(rawValue).toURL()
+        require(url.protocol.lowercase() in setOf("http", "https")) {
+            "Remote media URL must use HTTP or HTTPS"
+        }
+        Content.Media.FileUrl(mediaType, url)
     }
 }
 

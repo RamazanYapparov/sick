@@ -49,14 +49,14 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
     } else {
         state.currentQuestion?.displayContents(state.extractedBasePath).orEmpty()
     }
-    val useFullscreenMedia = shouldUseFullscreenQuestionMedia(state.phase, questionItems)
+    val useExpandedMediaLayout = shouldUseExpandedQuestionMedia(state.phase, questionItems)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colors.background,
     ) {
-        if (useFullscreenMedia) {
-            FullscreenQuestionMedia(
+        if (useExpandedMediaLayout) {
+            ExpandedQuestionMedia(
                 state = state,
                 items = questionItems,
                 bodySize = bodySize,
@@ -102,7 +102,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
     }
 }
 
-internal fun shouldUseFullscreenQuestionMedia(
+internal fun shouldUseExpandedQuestionMedia(
     phase: GamePhase,
     items: List<QuestionDisplayItem>,
 ): Boolean =
@@ -118,7 +118,7 @@ private fun QuestionDisplayItem.isVisualMedia(): Boolean =
         this is QuestionDisplayItem.RemoteVideo
 
 @Composable
-private fun FullscreenQuestionMedia(
+private fun ExpandedQuestionMedia(
     state: DesktopUiState,
     items: List<QuestionDisplayItem>,
     bodySize: TextUnit,
@@ -133,48 +133,16 @@ private fun FullscreenQuestionMedia(
         addAll(items.filterIsInstance<QuestionDisplayItem.Text>().map { it.text })
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        if (visualItems.size == 1) {
-            RenderQuestionDisplayItem(
-                item = visualItems.single(),
-                compact = false,
-                bodySize = bodySize,
-                onMediaFinished = onMediaFinished,
-                mediaStopSignal = state.mediaStopSignal,
-                mediaPaused = state.mediaPaused,
-                fillAvailableSpace = true,
-            )
-        } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                visualItems.forEach { item ->
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        RenderQuestionDisplayItem(
-                            item = item,
-                            compact = false,
-                            bodySize = bodySize,
-                            onMediaFinished = onMediaFinished,
-                            mediaStopSignal = state.mediaStopSignal,
-                            mediaPaused = state.mediaPaused,
-                            fillAvailableSpace = true,
-                        )
-                    }
-                }
-            }
-        }
-
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.68f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-            ) {
+            Column {
                 Text(
                     if (state.phase == GamePhase.ShowingAnswer) "Answer" else state.currentThemeName ?: "Question",
                     fontSize = 22.sp,
@@ -196,9 +164,6 @@ private fun FullscreenQuestionMedia(
             if (remaining > 0) {
                 Text(
                     text = "$remaining",
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.68f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 18.dp, vertical = 8.dp),
                     fontSize = timerSize,
                     fontWeight = FontWeight.Bold,
                     color = Palette.TimerColor,
@@ -209,12 +174,9 @@ private fun FullscreenQuestionMedia(
         if (textItems.isNotEmpty()) {
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, bottom = 56.dp)
-                    .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
+                    .background(Palette.DarkSurface, RoundedCornerShape(12.dp))
                     .padding(horizontal = 18.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 textItems.forEach { text ->
@@ -223,6 +185,36 @@ private fun FullscreenQuestionMedia(
                         fontSize = bodySize,
                         color = Color.White,
                     )
+                }
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            if (visualItems.size == 1) {
+                RenderQuestionDisplayItem(
+                    item = visualItems.single(),
+                    compact = false,
+                    bodySize = bodySize,
+                    onMediaFinished = onMediaFinished,
+                    mediaStopSignal = state.mediaStopSignal,
+                    mediaPaused = state.mediaPaused,
+                    fillAvailableSpace = true,
+                )
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    visualItems.forEach { item ->
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            RenderQuestionDisplayItem(
+                                item = item,
+                                compact = false,
+                                bodySize = bodySize,
+                                onMediaFinished = onMediaFinished,
+                                mediaStopSignal = state.mediaStopSignal,
+                                mediaPaused = state.mediaPaused,
+                                fillAvailableSpace = true,
+                            )
+                        }
+                    }
                 }
             }
         }

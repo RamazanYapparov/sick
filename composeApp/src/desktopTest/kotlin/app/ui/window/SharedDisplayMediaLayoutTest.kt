@@ -12,9 +12,9 @@ class SharedDisplayMediaLayoutTest {
         val image = QuestionDisplayItem.LocalImage("question.jpg")
         val video = QuestionDisplayItem.LocalVideo("question.mp4")
 
-        assertTrue(shouldUseFullscreenQuestionMedia(GamePhase.ShowingQuestion, listOf(image)))
-        assertTrue(shouldUseFullscreenQuestionMedia(GamePhase.PlayerAnswering, listOf(video)))
-        assertTrue(shouldUseFullscreenQuestionMedia(GamePhase.ShowingAnswer, listOf(image)))
+        assertTrue(shouldUseExpandedQuestionMedia(GamePhase.ShowingQuestion, listOf(image)))
+        assertTrue(shouldUseExpandedQuestionMedia(GamePhase.PlayerAnswering, listOf(video)))
+        assertTrue(shouldUseExpandedQuestionMedia(GamePhase.ShowingAnswer, listOf(image)))
     }
 
     @Test
@@ -22,8 +22,8 @@ class SharedDisplayMediaLayoutTest {
         val image = QuestionDisplayItem.LocalImage("question.jpg")
         val audio = QuestionDisplayItem.LocalAudio("question.mp3")
 
-        assertFalse(shouldUseFullscreenQuestionMedia(GamePhase.RevealingQuestion, listOf(image)))
-        assertFalse(shouldUseFullscreenQuestionMedia(GamePhase.ShowingQuestion, listOf(audio)))
-        assertFalse(shouldUseFullscreenQuestionMedia(GamePhase.ShowingQuestion, listOf(QuestionDisplayItem.Text("Text"))))
+        assertFalse(shouldUseExpandedQuestionMedia(GamePhase.RevealingQuestion, listOf(image)))
+        assertFalse(shouldUseExpandedQuestionMedia(GamePhase.ShowingQuestion, listOf(audio)))
+        assertFalse(shouldUseExpandedQuestionMedia(GamePhase.ShowingQuestion, listOf(QuestionDisplayItem.Text("Text"))))
     }
 }

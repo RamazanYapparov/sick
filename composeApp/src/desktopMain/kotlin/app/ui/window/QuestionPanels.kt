@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -142,7 +143,10 @@ internal fun RenderQuestionDisplayItem(
     onMediaFinished: () -> Unit = {},
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
+    fillAvailableSpace: Boolean = false,
 ) {
+    val visualMediaModifier = if (fillAvailableSpace) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+
     when (item) {
         is QuestionDisplayItem.Text ->
             Text(item.text, fontSize = bodySize, color = Color.White)
@@ -153,7 +157,7 @@ internal fun RenderQuestionDisplayItem(
                     loadBytes = { java.io.File(item.absolutePath).readBytes() },
                     errorText = "Image not found: ${item.absolutePath}",
                     bodySize = bodySize,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = visualMediaModifier,
                     paused = mediaPaused,
                 )
                 return
@@ -172,7 +176,7 @@ internal fun RenderQuestionDisplayItem(
                     // `Fit` scales the bitmap to fit within the available
                     // bounds while maintaining aspect ratio, so the entire
                     // image is always visible (letterboxed if needed).
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = visualMediaModifier,
                     contentScale = ContentScale.Fit,
                 )
             else
@@ -185,7 +189,7 @@ internal fun RenderQuestionDisplayItem(
                     loadBytes = { item.url.openStream().use { it.readBytes() } },
                     errorText = "Image unavailable: ${item.url}",
                     bodySize = bodySize,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = visualMediaModifier,
                     paused = mediaPaused,
                 )
                 return
@@ -203,14 +207,24 @@ internal fun RenderQuestionDisplayItem(
                     // `Fit` scales the bitmap to fit within the available
                     // bounds while maintaining aspect ratio, so the entire
                     // image is always visible (letterboxed if needed).
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = visualMediaModifier,
                     contentScale = ContentScale.Fit,
                 )
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
         is QuestionDisplayItem.LocalVideo -> {
-            if (compact) {
+            if (fillAvailableSpace) {
+                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
+                VideoPlayer(
+                    uri = uri,
+                    modifier = Modifier.fillMaxSize(),
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    muted = compact,
+                    onFinished = onMediaFinished,
+                )
+            } else if (compact) {
                 // Compact (host) view: video plays but is muted so audio
                 // stays unique to the shared display window.
                 val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
@@ -234,7 +248,16 @@ internal fun RenderQuestionDisplayItem(
             }
         }
         is QuestionDisplayItem.RemoteVideo -> {
-            if (compact) {
+            if (fillAvailableSpace) {
+                VideoPlayer(
+                    uri = item.url.toString(),
+                    modifier = Modifier.fillMaxSize(),
+                    stopSignal = mediaStopSignal,
+                    paused = mediaPaused,
+                    muted = compact,
+                    onFinished = onMediaFinished,
+                )
+            } else if (compact) {
                 VideoPlayer(
                     uri = item.url.toString(),
                     modifier = Modifier.fillMaxWidth().height(200.dp),

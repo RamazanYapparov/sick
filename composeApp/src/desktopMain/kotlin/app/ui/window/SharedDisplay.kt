@@ -10,7 +10,6 @@ import app.state.displayContents
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
@@ -45,43 +43,180 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
     val bodySize = if (compact) 12.sp else 22.sp
     val timerSize = if (compact) 24.sp else 46.sp
 
+    val currentAnswer = state.currentQuestion?.answer
+    val questionItems = if (state.phase == GamePhase.ShowingAnswer && currentAnswer is Answer.Simple) {
+        displayContents(currentAnswer.contents, state.extractedBasePath)
+    } else {
+        state.currentQuestion?.displayContents(state.extractedBasePath).orEmpty()
+    }
+    val useExpandedMediaLayout = shouldUseExpandedQuestionMedia(state.phase, questionItems)
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colors.background,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(pad),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp),
-        ) {
-            Text(
-                if (state.roundName != null) "Round ${state.currentRoundIndex} / ${state.totalRounds}" else "Lobby",
-                fontSize = bodySize,
-                color = Palette.AccentGold,
+        if (useExpandedMediaLayout) {
+            ExpandedQuestionMedia(
+                state = state,
+                items = questionItems,
+                bodySize = bodySize,
+                timerSize = timerSize,
+                onMediaFinished = onMediaFinished,
             )
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(pad),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp),
+            ) {
+                Text(
+                    if (state.roundName != null) "Round ${state.currentRoundIndex} / ${state.totalRounds}" else "Lobby",
+                    fontSize = bodySize,
+                    color = Palette.AccentGold,
+                )
 
-            Box(modifier = Modifier.weight(1f)) {
-            when {
-                state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(
-                        state.currentQuestion.answer,
-                        state.extractedBasePath,
-                        compact,
-                        bodySize,
-                        onMediaFinished = onMediaFinished,
-                        mediaStopSignal = state.mediaStopSignal,
-                        mediaPaused = state.mediaPaused,
+                Box(modifier = Modifier.weight(1f)) {
+                    when {
+                        state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
+                            AnswerPanel(
+                                state.currentQuestion.answer,
+                                state.extractedBasePath,
+                                compact,
+                                bodySize,
+                                onMediaFinished = onMediaFinished,
+                                mediaStopSignal = state.mediaStopSignal,
+                                mediaPaused = state.mediaPaused,
+                            )
+                        state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
+                            RevealingQuestionPlaceholder(state, compact, bodySize)
+                        state.currentQuestion != null ->
+                            CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
+                        state.phase == GamePhase.Lobby && state.hasPack ->
+                            LobbyPanel(state, compact)
+                        else ->
+                            BoardOverview(state, compact)
+                    }
+                }
+                PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, compact)
+            }
+        }
+    }
+}
+
+internal fun shouldUseExpandedQuestionMedia(
+    phase: GamePhase,
+    items: List<QuestionDisplayItem>,
+): Boolean =
+    (phase == GamePhase.ShowingQuestion ||
+        phase == GamePhase.PlayerAnswering ||
+        phase == GamePhase.ShowingAnswer) &&
+        items.any(QuestionDisplayItem::isVisualMedia)
+
+private fun QuestionDisplayItem.isVisualMedia(): Boolean =
+    this is QuestionDisplayItem.LocalImage ||
+        this is QuestionDisplayItem.RemoteImage ||
+        this is QuestionDisplayItem.LocalVideo ||
+        this is QuestionDisplayItem.RemoteVideo
+
+@Composable
+private fun ExpandedQuestionMedia(
+    state: DesktopUiState,
+    items: List<QuestionDisplayItem>,
+    bodySize: TextUnit,
+    timerSize: TextUnit,
+    onMediaFinished: () -> Unit,
+) {
+    val visualItems = items.filter(QuestionDisplayItem::isVisualMedia)
+    val textItems = buildList {
+        if (state.phase == GamePhase.ShowingAnswer) {
+            addAll((state.currentQuestion?.answer as? Answer.Simple)?.right.orEmpty())
+        }
+        addAll(items.filterIsInstance<QuestionDisplayItem.Text>().map { it.text })
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    if (state.phase == GamePhase.ShowingAnswer) "Answer" else state.currentThemeName ?: "Question",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Palette.AccentGold,
+                )
+                Text(
+                    "${state.currentQuestion?.price ?: 0} points",
+                    fontSize = bodySize,
+                    color = Color.White,
+                )
+            }
+
+            val remaining = if (state.phase == GamePhase.PlayerAnswering) {
+                state.answerTimerRemaining
+            } else {
+                state.timerRemaining
+            }
+            if (remaining > 0) {
+                Text(
+                    text = "$remaining",
+                    fontSize = timerSize,
+                    fontWeight = FontWeight.Bold,
+                    color = Palette.TimerColor,
+                )
+            }
+        }
+
+        if (textItems.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Palette.DarkSurface, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                textItems.forEach { text ->
+                    Text(
+                        text = text,
+                        fontSize = bodySize,
+                        color = Color.White,
                     )
-                state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
-                    RevealingQuestionPlaceholder(state, compact, bodySize)
-                state.currentQuestion != null ->
-                    CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
-                state.phase == GamePhase.Lobby && state.hasPack ->
-                    LobbyPanel(state, compact)
-                else ->
-                    BoardOverview(state, compact)
+                }
             }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            if (visualItems.size == 1) {
+                RenderQuestionDisplayItem(
+                    item = visualItems.single(),
+                    compact = false,
+                    bodySize = bodySize,
+                    onMediaFinished = onMediaFinished,
+                    mediaStopSignal = state.mediaStopSignal,
+                    mediaPaused = state.mediaPaused,
+                    fillAvailableSpace = true,
+                )
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    visualItems.forEach { item ->
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            RenderQuestionDisplayItem(
+                                item = item,
+                                compact = false,
+                                bodySize = bodySize,
+                                onMediaFinished = onMediaFinished,
+                                mediaStopSignal = state.mediaStopSignal,
+                                mediaPaused = state.mediaPaused,
+                                fillAvailableSpace = true,
+                            )
+                        }
+                    }
+                }
             }
-            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, compact)
         }
     }
 }
@@ -267,6 +402,8 @@ internal fun SelectOptionsList(
 internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onMediaFinished: () -> Unit = {}) {
     val question = state.currentQuestion ?: return
     val selectAnswer = question.answer
+    val displayItems = question.displayContents(state.extractedBasePath)
+    val singleVisualItem = displayItems.filter(QuestionDisplayItem::isVisualMedia).singleOrNull()
 
     Card(
         modifier = Modifier.fillMaxSize(),
@@ -310,36 +447,26 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
 
             Divider(color = Palette.DividerColor)
 
-            // Content area fills remaining vertical space.
-            // Images are constrained to the available height so they never
-            // get cropped — landscape images fill the width, portrait images
-            // fill the height and are centred horizontally (no scrolling).
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                val availableHeight = maxHeight
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
                 ) {
-                    question.displayContents(state.extractedBasePath).forEach { item ->
-                        when (item) {
-                            is QuestionDisplayItem.LocalImage,
-                            is QuestionDisplayItem.RemoteImage -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = availableHeight)
-                                ) {
-                                    RenderQuestionDisplayItem(
-                                        item = item,
-                                        compact = compact,
-                                        bodySize = bodySize,
-                                        onMediaFinished = onMediaFinished,
-                                        mediaStopSignal = state.mediaStopSignal,
-                                        mediaPaused = state.mediaPaused,
-                                    )
-                                }
+                    displayItems.forEach { item ->
+                        if (item === singleVisualItem) {
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RenderQuestionDisplayItem(
+                                    item = item,
+                                    compact = compact,
+                                    bodySize = bodySize,
+                                    onMediaFinished = onMediaFinished,
+                                    mediaStopSignal = state.mediaStopSignal,
+                                    mediaPaused = state.mediaPaused,
+                                    fillAvailableSpace = true,
+                                )
                             }
-                            else -> RenderQuestionDisplayItem(
+                        } else {
+                            RenderQuestionDisplayItem(
                                 item = item,
                                 compact = compact,
                                 bodySize = bodySize,

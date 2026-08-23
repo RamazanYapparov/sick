@@ -3,6 +3,7 @@ package app.ui.window
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
+import app.ui.media.AnimatedGif
 import app.ui.media.AudioPlayer
 import app.ui.media.VideoPlayer
 import app.ui.media.normalizeMediaUri
@@ -146,6 +147,17 @@ internal fun RenderQuestionDisplayItem(
         is QuestionDisplayItem.Text ->
             Text(item.text, fontSize = bodySize, color = Color.White)
         is QuestionDisplayItem.LocalImage -> {
+            if (item.absolutePath.endsWith(".gif", ignoreCase = true)) {
+                AnimatedGif(
+                    sourceKey = item.absolutePath,
+                    loadBytes = { java.io.File(item.absolutePath).readBytes() },
+                    errorText = "Image not found: ${item.absolutePath}",
+                    bodySize = bodySize,
+                    modifier = Modifier.fillMaxWidth(),
+                    paused = mediaPaused,
+                )
+                return
+            }
             val bitmap = remember(item.absolutePath) {
                 runCatching {
                     java.io.File(item.absolutePath).inputStream().buffered()
@@ -167,6 +179,17 @@ internal fun RenderQuestionDisplayItem(
                 Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
         }
         is QuestionDisplayItem.RemoteImage -> {
+            if (item.url.path.endsWith(".gif", ignoreCase = true)) {
+                AnimatedGif(
+                    sourceKey = item.url,
+                    loadBytes = { item.url.openStream().use { it.readBytes() } },
+                    errorText = "Image unavailable: ${item.url}",
+                    bodySize = bodySize,
+                    modifier = Modifier.fillMaxWidth(),
+                    paused = mediaPaused,
+                )
+                return
+            }
             val bitmap = remember(item.url) {
                 runCatching {
                     item.url.openStream().buffered().use(::loadImageBitmap)

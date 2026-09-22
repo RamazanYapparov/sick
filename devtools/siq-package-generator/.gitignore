@@ -1,0 +1,9 @@
+.dotnet/
+.dotnet-home/
+.cache/
+.nuget/
+bin/
+obj/
+artifacts/
+media/*
+!media/README.md

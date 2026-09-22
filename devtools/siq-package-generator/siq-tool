@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dotnet_bin="$tool_dir/.dotnet/dotnet"
+
+if [[ ! -x "$dotnet_bin" || ! -f "$tool_dir/obj/project.assets.json" ]]; then
+  "$tool_dir/bootstrap.sh"
+fi
+
+DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+DOTNET_CLI_HOME="$tool_dir/.dotnet-home" \
+NUGET_PACKAGES="$tool_dir/.nuget/packages" \
+  exec "$dotnet_bin" run \
+    --project "$tool_dir/SiqPackageGenerator.csproj" \
+    --configuration Release \
+    -- "$@"

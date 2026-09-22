@@ -1,15 +1,12 @@
 package com.sick.com.sick.siq.reader
 
 import java.io.BufferedOutputStream
-import java.io.File
 import java.net.URLDecoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import kotlin.io.path.createDirectory
-import kotlin.io.path.exists
 import kotlin.io.path.outputStream
 
 class SiqExtractor(private val source: String, private val destination: String) {
@@ -32,9 +29,6 @@ class SiqExtractor(private val source: String, private val destination: String) 
         println("Created temp directory $tempDir")
         ZipFile(source).use { zf ->
             zf.entries().asSequence().forEach { entry ->
-                if (entry.hasDirectory) {
-                    tempDir.resolve(entry.directoryName).createIfNotExists()
-                }
                 entry.write(zf, tempDir)
             }
         }
@@ -42,13 +36,15 @@ class SiqExtractor(private val source: String, private val destination: String) 
     }
 
     private fun ZipEntry.write(file: ZipFile, destination: Path) {
+        val outputPath = safeOutputPath(destination)
+        if (isDirectory) {
+            Files.createDirectories(outputPath)
+            return
+        }
+
+        outputPath.parent?.let(Files::createDirectories)
         file.getInputStream(this).use { inputStream ->
-            name.takeIf { "/" in name }
-                ?.split("/")?.first()
-                ?.let {
-                    destination.resolve(it).createIfNotExists()
-                }
-            BufferedOutputStream(destination.resolve(name.decode()).outputStream(StandardOpenOption.CREATE)).use { outputStream ->
+            BufferedOutputStream(outputPath.outputStream(StandardOpenOption.CREATE)).use { outputStream ->
                 val bytesIn = ByteArray(BUFFER_SIZE)
                 var read: Int
                 while (inputStream.read(bytesIn).also { read = it } != -1) {
@@ -58,12 +54,16 @@ class SiqExtractor(private val source: String, private val destination: String) 
         }
     }
 
+    private fun ZipEntry.safeOutputPath(destination: Path): Path {
+        val root = destination.toAbsolutePath().normalize()
+        val output = root.resolve(name.decode()).normalize()
+        require(output.startsWith(root)) { "ZIP entry escapes extraction directory: $name" }
+        return output
+    }
+
 
     private companion object {
         const val BUFFER_SIZE = 4096
-        val ZipEntry.hasDirectory: Boolean get() = File.separator in name
-        val ZipEntry.directoryName: String get() = name.split(File.separator).first()
-        fun Path.createIfNotExists() { if (!exists()) createDirectory() }
         fun String.decode() = URLDecoder.decode(this, "UTF-8")
     }
 }

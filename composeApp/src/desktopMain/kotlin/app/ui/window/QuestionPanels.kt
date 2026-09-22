@@ -22,10 +22,15 @@ import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +38,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sick.model.Answer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.net.URL
 import java.nio.file.Path
 
 /**
@@ -167,11 +176,13 @@ internal fun RenderQuestionDisplayItem(
                 Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
         }
         is QuestionDisplayItem.RemoteImage -> {
-            val bitmap = remember(item.url) {
-                runCatching {
-                    item.url.openStream().buffered().use(::loadImageBitmap)
-                }.getOrNull()
+            var result by remember(item.url) { mutableStateOf<Result<ImageBitmap>?>(null) }
+            LaunchedEffect(item.url) {
+                result = withContext(Dispatchers.IO) {
+                    runCatching { loadRemoteImage(item.url) }
+                }
             }
+            val bitmap = result?.getOrNull()
             if (bitmap != null)
                 Image(
                     bitmap = bitmap,
@@ -183,6 +194,8 @@ internal fun RenderQuestionDisplayItem(
                     modifier = Modifier.fillMaxWidth(),
                     contentScale = ContentScale.Fit,
                 )
+            else if (result == null)
+                Text("Loading image…", color = Color.LightGray, fontSize = bodySize)
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
@@ -250,4 +263,28 @@ internal fun RenderQuestionDisplayItem(
             )
         }
     }
+}
+
+private const val MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024
+private const val REMOTE_CONNECT_TIMEOUT_MS = 5_000
+private const val REMOTE_READ_TIMEOUT_MS = 10_000
+
+private fun loadRemoteImage(url: URL): ImageBitmap {
+    require(url.protocol.lowercase() in setOf("http", "https")) {
+        "Remote images must use HTTP or HTTPS"
+    }
+    val connection = url.openConnection().apply {
+        connectTimeout = REMOTE_CONNECT_TIMEOUT_MS
+        readTimeout = REMOTE_READ_TIMEOUT_MS
+        useCaches = false
+    }
+    val declaredSize = connection.contentLengthLong
+    require(declaredSize < 0 || declaredSize <= MAX_REMOTE_IMAGE_BYTES) {
+        "Remote image exceeds size limit"
+    }
+    val bytes = connection.getInputStream().buffered().use {
+        it.readNBytes(MAX_REMOTE_IMAGE_BYTES + 1)
+    }
+    require(bytes.size <= MAX_REMOTE_IMAGE_BYTES) { "Remote image exceeds size limit" }
+    return ByteArrayInputStream(bytes).use(::loadImageBitmap)
 }

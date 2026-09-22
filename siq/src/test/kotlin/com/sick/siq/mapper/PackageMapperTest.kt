@@ -17,6 +17,7 @@ import com.sick.siq.xml.model.Theme
 import com.sick.siq.xml.model.Themes
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class PackageMapperTest {
@@ -124,5 +125,26 @@ class PackageMapperTest {
         assertEquals(2, contents.size)
         assertIs<Content.Text>(contents[0])
         assertIs<Content.Media.FileRef>(contents[1])
+    }
+
+    @Test
+    fun `maps HTTPS media URL`() {
+        val content = Item().apply {
+            type = "image"
+            value = "https://example.com/image.png"
+        }.toContentOrNull()
+
+        assertIs<Content.Media.FileUrl>(content)
+        assertEquals("https", content.url.protocol)
+    }
+
+    @Test
+    fun `rejects local file media URL`() {
+        val item = Item().apply {
+            type = "image"
+            value = "file:///etc/passwd"
+        }
+
+        assertFailsWith<IllegalArgumentException> { item.toContentOrNull() }
     }
 }

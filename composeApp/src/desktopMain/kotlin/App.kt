@@ -1,6 +1,7 @@
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import app.session.DesktopSessionController
+import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.ui.window.HostWindowContent
 import app.ui.window.SharedDisplayScreen
@@ -23,7 +24,7 @@ fun HostApp(controller: DesktopSessionController) {
 }
 
 @Composable
-fun SharedDisplayApp(state: DesktopUiState, onMediaFinished: () -> Unit = {}) {
+fun SharedDisplayApp(state: DesktopUiState, audioPlayback: AudioPlaybackState, onMediaFinished: () -> Unit = {}) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
             primary = Palette.SharedPrimary,
@@ -34,6 +35,6 @@ fun SharedDisplayApp(state: DesktopUiState, onMediaFinished: () -> Unit = {}) {
             onBackground = Palette.ThemeOnBackground,
         )
     ) {
-        SharedDisplayScreen(state = state, compact = false, onMediaFinished = onMediaFinished)
+        SharedDisplayScreen(state = state, compact = false, audioPlayback = audioPlayback, onMediaFinished = onMediaFinished)
     }
 }

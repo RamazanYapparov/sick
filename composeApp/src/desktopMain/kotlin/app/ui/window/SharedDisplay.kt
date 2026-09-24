@@ -4,6 +4,7 @@ import app.ui.components.PlayerCards
 import app.ui.components.QuestionBoard
 import app.ui.components.QrCode
 import app.ui.theme.Palette
+import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
@@ -40,7 +41,12 @@ import com.sick.state.GamePhase
 import java.nio.file.Path
 
 @Composable
-internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMediaFinished: () -> Unit = {}) {
+internal fun SharedDisplayScreen(
+    state: DesktopUiState,
+    compact: Boolean,
+    audioPlayback: AudioPlaybackState,
+    onMediaFinished: () -> Unit = {},
+) {
     val pad = if (compact) 12.dp else 24.dp
     val bodySize = if (compact) 12.sp else 22.sp
     val timerSize = if (compact) 24.sp else 46.sp
@@ -67,6 +73,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                         state.extractedBasePath,
                         compact,
                         bodySize,
+                        audioPlayback = audioPlayback,
                         onMediaFinished = onMediaFinished,
                         mediaStopSignal = state.mediaStopSignal,
                         mediaPaused = state.mediaPaused,
@@ -74,7 +81,7 @@ internal fun SharedDisplayScreen(state: DesktopUiState, compact: Boolean, onMedi
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
-                    CurrentQuestionPanel(state, compact, bodySize, timerSize, onMediaFinished)
+                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onMediaFinished)
                 state.phase == GamePhase.Lobby && state.hasPack ->
                     LobbyPanel(state, compact)
                 else ->
@@ -264,7 +271,14 @@ internal fun SelectOptionsList(
 }
 
 @Composable
-internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodySize: TextUnit, timerSize: TextUnit, onMediaFinished: () -> Unit = {}) {
+internal fun CurrentQuestionPanel(
+    state: DesktopUiState,
+    compact: Boolean,
+    bodySize: TextUnit,
+    timerSize: TextUnit,
+    audioPlayback: AudioPlaybackState,
+    onMediaFinished: () -> Unit = {},
+) {
     val question = state.currentQuestion ?: return
     val selectAnswer = question.answer
 
@@ -333,6 +347,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                                         item = item,
                                         compact = compact,
                                         bodySize = bodySize,
+                                        audioPlayback = audioPlayback,
                                         onMediaFinished = onMediaFinished,
                                         mediaStopSignal = state.mediaStopSignal,
                                         mediaPaused = state.mediaPaused,
@@ -343,6 +358,7 @@ internal fun CurrentQuestionPanel(state: DesktopUiState, compact: Boolean, bodyS
                                 item = item,
                                 compact = compact,
                                 bodySize = bodySize,
+                                audioPlayback = audioPlayback,
                                 onMediaFinished = onMediaFinished,
                                 mediaStopSignal = state.mediaStopSignal,
                                 mediaPaused = state.mediaPaused,

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.session.PackScanner
 import app.session.ScannedPackInfo
+import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.withEngineSnapshot
 import com.sick.engine.GameEngine
@@ -74,6 +75,9 @@ class DesktopSessionController(
 
     var uiState by mutableStateOf(DesktopUiState.initial(port))
         private set
+
+    /** Progress of the audio played on the display window, mirrored on the host. */
+    val audioPlayback = AudioPlaybackState()
 
     init {
         bindEngine(engine)

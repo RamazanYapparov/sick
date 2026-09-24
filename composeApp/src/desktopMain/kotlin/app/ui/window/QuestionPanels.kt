@@ -1,9 +1,11 @@
 package app.ui.window
 
+import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
 import app.ui.media.AudioPlayer
+import app.ui.media.AudioProgress
 import app.ui.media.VideoPlayer
 import app.ui.media.normalizeMediaUri
 import app.ui.theme.Palette
@@ -71,6 +73,7 @@ internal fun AnswerPanel(
     basePath: Path?,
     compact: Boolean,
     bodySize: TextUnit,
+    audioPlayback: AudioPlaybackState,
     onMediaFinished: () -> Unit = {},
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
@@ -112,6 +115,7 @@ internal fun AnswerPanel(
                                 item = item,
                                 compact = compact,
                                 bodySize = bodySize,
+                                audioPlayback = audioPlayback,
                                 onMediaFinished = onMediaFinished,
                                 mediaStopSignal = mediaStopSignal,
                                 mediaPaused = mediaPaused,
@@ -138,6 +142,7 @@ internal fun RenderQuestionDisplayItem(
     item: QuestionDisplayItem,
     compact: Boolean,
     bodySize: TextUnit,
+    audioPlayback: AudioPlaybackState,
     onMediaFinished: () -> Unit = {},
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
@@ -230,24 +235,45 @@ internal fun RenderQuestionDisplayItem(
                 )
             }
         }
-        is QuestionDisplayItem.LocalAudio -> {
-            val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-            AudioPlayer(
-                uri = uri,
-                compact = compact,
-                stopSignal = mediaStopSignal,
-                paused = mediaPaused,
-                onFinished = onMediaFinished,
-            )
-        }
-        is QuestionDisplayItem.RemoteAudio -> {
-            AudioPlayer(
-                uri = item.url.toString(),
-                compact = compact,
-                stopSignal = mediaStopSignal,
-                paused = mediaPaused,
-                onFinished = onMediaFinished,
-            )
-        }
+        is QuestionDisplayItem.LocalAudio -> AudioItem(
+            uri = item.absolutePath,
+            compact = compact,
+            audioPlayback = audioPlayback,
+            onMediaFinished = onMediaFinished,
+            mediaStopSignal = mediaStopSignal,
+            mediaPaused = mediaPaused,
+        )
+        is QuestionDisplayItem.RemoteAudio -> AudioItem(
+            uri = item.url.toString(),
+            compact = compact,
+            audioPlayback = audioPlayback,
+            onMediaFinished = onMediaFinished,
+            mediaStopSignal = mediaStopSignal,
+            mediaPaused = mediaPaused,
+        )
+    }
+}
+
+@Composable
+private fun AudioItem(
+    uri: String,
+    compact: Boolean,
+    audioPlayback: AudioPlaybackState,
+    onMediaFinished: () -> Unit,
+    mediaStopSignal: Int,
+    mediaPaused: Boolean,
+) {
+    if (compact) {
+        // Compact (host) view: progress only. The shared display window owns
+        // the single audio player, so the clip is never heard twice.
+        AudioProgress(uri = uri, playback = audioPlayback, compact = true)
+    } else {
+        AudioPlayer(
+            uri = uri,
+            playback = audioPlayback,
+            stopSignal = mediaStopSignal,
+            paused = mediaPaused,
+            onFinished = onMediaFinished,
+        )
     }
 }

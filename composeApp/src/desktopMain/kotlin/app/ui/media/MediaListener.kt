@@ -27,7 +27,7 @@ fun createMediaListener(
     normalizedUri: String,
     onTotalMs: (Double) -> Unit,
     onCurrentMs: (Double) -> Unit,
-    onErrorMsg: (String?) -> Unit,
+    onErrorMsg: (String) -> Unit,
     onFinished: () -> Unit,
     onErrorExtra: ((MediaPlayer) -> Unit)? = null,
 ): MediaPlayerEventAdapter {

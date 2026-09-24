@@ -158,6 +158,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 basePath = state.extractedBasePath,
                                 compact = true,
                                 bodySize = 12.sp,
+                                audioPlayback = controller.audioPlayback,
                                 onMediaFinished = controller::mediaFinished,
                                 mediaStopSignal = state.mediaStopSignal,
                                 mediaPaused = state.mediaPaused,
@@ -177,6 +178,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 compact = true,
                                 bodySize = 12.sp,
                                 timerSize = 24.sp,
+                                audioPlayback = controller.audioPlayback,
                                 onMediaFinished = controller::mediaFinished,
                             )
                         }

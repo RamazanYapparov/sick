@@ -15,9 +15,10 @@ sealed interface QuestionDisplayItem {
     data class RemoteAudio(val url: URL) : QuestionDisplayItem
 }
 
+/** Text first, then media; each group keeps pack order. */
 fun displayContents(contents: List<Content>, basePath: Path?): List<QuestionDisplayItem> =
     contents
-        .sortedWith { item, _ -> if (item is Content.Text) -1 else 1 }
+        .sortedBy { it !is Content.Text }
         .map { content ->
         when (content) {
             is Content.Text -> QuestionDisplayItem.Text(content.text)

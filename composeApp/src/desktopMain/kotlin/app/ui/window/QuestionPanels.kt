@@ -149,7 +149,12 @@ internal fun RenderQuestionDisplayItem(
 ) {
     when (item) {
         is QuestionDisplayItem.Text ->
-            Text(item.text, fontSize = bodySize, color = Color.White)
+            Text(
+                item.text,
+                fontSize = bodySize,
+                lineHeight = bodySize * 1.4f,
+                color = Color.White,
+            )
         is QuestionDisplayItem.LocalImage -> {
             val bitmap = remember(item.absolutePath) {
                 runCatching {

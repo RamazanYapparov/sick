@@ -11,7 +11,6 @@ import app.state.displayContents
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
@@ -29,12 +27,15 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import com.sick.model.Answer
 import com.sick.state.GamePhase
@@ -280,7 +281,9 @@ internal fun CurrentQuestionPanel(
     onMediaFinished: () -> Unit = {},
 ) {
     val question = state.currentQuestion ?: return
-    val selectAnswer = question.answer
+    val contents = remember(question, state.extractedBasePath) {
+        question.displayContents(state.extractedBasePath)
+    }
 
     Card(
         modifier = Modifier.fillMaxSize(),
@@ -324,59 +327,121 @@ internal fun CurrentQuestionPanel(
 
             Divider(color = Palette.DividerColor)
 
-            // Content area fills remaining vertical space.
-            // Images are constrained to the available height so they never
-            // get cropped — landscape images fill the width, portrait images
-            // fill the height and are centred horizontally (no scrolling).
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                val availableHeight = maxHeight
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
-                ) {
-                    question.displayContents(state.extractedBasePath).forEach { item ->
-                        when (item) {
-                            is QuestionDisplayItem.LocalImage,
-                            is QuestionDisplayItem.RemoteImage -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = availableHeight)
-                                ) {
-                                    RenderQuestionDisplayItem(
-                                        item = item,
-                                        compact = compact,
-                                        bodySize = bodySize,
-                                        audioPlayback = audioPlayback,
-                                        onMediaFinished = onMediaFinished,
-                                        mediaStopSignal = state.mediaStopSignal,
-                                        mediaPaused = state.mediaPaused,
-                                    )
-                                }
-                            }
-                            else -> RenderQuestionDisplayItem(
-                                item = item,
-                                compact = compact,
-                                bodySize = bodySize,
-                                audioPlayback = audioPlayback,
-                                onMediaFinished = onMediaFinished,
-                                mediaStopSignal = state.mediaStopSignal,
-                                mediaPaused = state.mediaPaused,
-                            )
-                        }
-                    }
-                    if (selectAnswer is Answer.Select) {
-                        Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
-                        SelectOptionsList(
-                            options = selectAnswer.options,
-                            basePath = state.extractedBasePath,
-                            compact = compact,
-                            bodySize = bodySize,
-                            revealCorrect = false,
-                        )
-                    }
+            QuestionContent(
+                items = contents,
+                selectOptions = (question.answer as? Answer.Select)?.options,
+                basePath = state.extractedBasePath,
+                compact = compact,
+                fixedBodySize = bodySize,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) { item, size ->
+                RenderQuestionDisplayItem(
+                    item = item,
+                    compact = compact,
+                    bodySize = size,
+                    audioPlayback = audioPlayback,
+                    onMediaFinished = onMediaFinished,
+                    mediaStopSignal = state.mediaStopSignal,
+                    mediaPaused = state.mediaPaused,
+                )
+            }
+        }
+    }
+}
+
+private const val MIN_QUESTION_FONT_SP = 18
+private const val MAX_QUESTION_FONT_SP = 72
+
+/** Share of the content height all images together may take when text is also shown. */
+private const val IMAGE_SHARE_WITH_TEXT = 0.5f
+
+/**
+ * Stacks question [items] in pack order, followed by [selectOptions].
+ *
+ * On the shared display the text size is the largest one in
+ * [MIN_QUESTION_FONT_SP]..[MAX_QUESTION_FONT_SP] at which every text item and
+ * the options, measured with their real composables, fit beside the media.
+ * The compact host preview keeps [fixedBodySize]. Media items are composed
+ * once and never probed, so players are not duplicated.
+ */
+@Composable
+private fun QuestionContent(
+    items: List<QuestionDisplayItem>,
+    selectOptions: List<Answer.Select.Option>?,
+    basePath: Path?,
+    compact: Boolean,
+    fixedBodySize: TextUnit,
+    modifier: Modifier,
+    renderItem: @Composable (QuestionDisplayItem, TextUnit) -> Unit,
+) {
+    val gap = if (compact) 8.dp else 14.dp
+    val hasTextBlock = selectOptions != null || items.any { it is QuestionDisplayItem.Text }
+    val imageCount = items.count { it.isImage() }
+
+    @Composable
+    fun TextBlock(size: TextUnit) {
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            items.forEach { if (it is QuestionDisplayItem.Text) renderItem(it, size) }
+            if (selectOptions != null) {
+                SelectOptionsList(selectOptions, basePath, compact, size, revealCorrect = false)
+            }
+        }
+    }
+
+    SubcomposeLayout(modifier) { constraints ->
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val gapPx = gap.roundToPx()
+        val imageCap = if (imageCount == 0) height
+        else (if (hasTextBlock) (height * IMAGE_SHARE_WITH_TEXT).toInt() else height) / imageCount
+
+        val media = items.withIndex()
+            .filter { it.value !is QuestionDisplayItem.Text }
+            .associate { (index, item) ->
+                val maxHeight = if (item.isImage()) imageCap else height
+                index to subcompose("media" to index) { renderItem(item, fixedBodySize) }
+                    .map { it.measure(Constraints(maxWidth = width, maxHeight = maxHeight)) }
+            }
+        val mediaHeight = media.values.sumOf { slot -> slot.sumOf { it.height } } + gapPx * media.size
+
+        val probes = mutableMapOf<Int, Int>()
+        fun fits(sp: Int): Boolean = probes.getOrPut(sp) {
+            subcompose("probe" to sp) { TextBlock(sp.sp) }
+                .sumOf { it.measure(Constraints(maxWidth = width)).height }
+        } <= height - mediaHeight
+
+        val fontSize = if (compact || !hasTextBlock) {
+            fixedBodySize
+        } else {
+            var lo = MIN_QUESTION_FONT_SP
+            var hi = MAX_QUESTION_FONT_SP
+            while (lo < hi) {
+                val mid = (lo + hi + 1) / 2
+                if (fits(mid)) lo = mid else hi = mid - 1
+            }
+            lo.sp
+        }
+
+        val slots = items.indices.map { index ->
+            media[index] ?: subcompose("text" to index) { renderItem(items[index], fontSize) }
+                .map { it.measure(Constraints(maxWidth = width)) }
+        } + listOfNotNull(selectOptions?.let { options ->
+            subcompose("options") { SelectOptionsList(options, basePath, compact, fontSize, revealCorrect = false) }
+                .map { it.measure(Constraints(maxWidth = width)) }
+        })
+
+        layout(width, height) {
+            var y = 0
+            slots.filter { it.isNotEmpty() }.forEachIndexed { i, slot ->
+                if (i > 0) y += gapPx
+                slot.forEach { placeable ->
+                    placeable.place(0, y)
+                    y += placeable.height
                 }
             }
         }
     }
 }
+
+private fun QuestionDisplayItem.isImage(): Boolean =
+    this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage

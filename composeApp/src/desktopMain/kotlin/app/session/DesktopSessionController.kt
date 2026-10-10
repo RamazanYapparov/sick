@@ -300,25 +300,38 @@ class DesktopSessionController(
         logger.info { "Session replaced with new pack: ${pack.name}" }
     }
 
+    /**
+     * Engine listeners run on whichever thread called `engine.process`: the EDT
+     * for host actions and timers, a Ktor worker for phone requests. Controller
+     * fields and Compose state are EDT-only, so the work hops there when needed.
+     */
     private fun bindEngine(target: GameEngine) {
         target.addListener { _, _, previousPhase, newPhase ->
             val isMediaActive = timerOrchestrator.isMediaPending
-            when {
-                previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && isMediaActive ->
-                    mediaPaused = true
-                previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingQuestion ->
-                    mediaPaused = false
-                previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingAnswer -> {
-                    mediaPaused = false
-                    mediaStopSignal++
-                }
-                newPhase == GamePhase.ChoosingQuestion -> {
-                    mediaStopSignal = 0
-                    mediaPaused = false
-                }
-            }
-            publishState()
+            onEdt { onPhaseChange(previousPhase, newPhase, isMediaActive) }
         }
+    }
+
+    private fun onEdt(block: () -> Unit) {
+        if (EventQueue.isDispatchThread()) block() else EventQueue.invokeLater(block)
+    }
+
+    private fun onPhaseChange(previousPhase: GamePhase, newPhase: GamePhase, isMediaActive: Boolean) {
+        when {
+            previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && isMediaActive ->
+                mediaPaused = true
+            previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingQuestion ->
+                mediaPaused = false
+            previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingAnswer -> {
+                mediaPaused = false
+                mediaStopSignal++
+            }
+            newPhase == GamePhase.ChoosingQuestion -> {
+                mediaStopSignal = 0
+                mediaPaused = false
+            }
+        }
+        publishState()
     }
 
     private fun publishState() {

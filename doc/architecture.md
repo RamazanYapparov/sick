@@ -38,6 +38,7 @@ Lobby ──[StartGame]──→ ChoosingPlayer
 ChoosingPlayer ──[SelectActivePlayer]──→ ChoosingQuestion
 ChoosingQuestion ──[QuestionSelected]──→ ShowingQuestion
 ShowingQuestion ──[PlayerBuzzed]──→ PlayerAnswering
+PlayerAnswering ──[PlayerBuzzed]──→ PlayerAnswering   (Late Buzz: recorded, no right to answer)
 ShowingQuestion ──[TimerExpired]──→ ChoosingPlayer
 PlayerAnswering ──[HostAccepted]──→ ChoosingQuestion | RoundEnd | GameOver
 PlayerAnswering ──[HostRejected]──→ ShowingQuestion
@@ -68,7 +69,7 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | `StartGame` | Host | Lobby |
 | `SelectActivePlayer(playerId)` | Host | ChoosingPlayer |
 | `QuestionSelected(questionId)` | Active player | ChoosingQuestion |
-| `PlayerBuzzed(playerId)` | Player phone | ShowingQuestion |
+| `PlayerBuzzed(playerId)` | Player phone / Host Pick | ShowingQuestion, PlayerAnswering (Late Buzz) |
 | `TimerTick` | GameTimer | ShowingQuestion |
 | `TimerExpired` | GameTimer | ShowingQuestion |
 | `HostAccepted` | Host | PlayerAnswering |
@@ -78,6 +79,10 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 ### Immutability
 
 All models are immutable (`val` fields). State changes produce new `GameState` instances via `copy()`. `GameEngine` holds the mutable reference internally and exposes read-only `state` and `phase` properties.
+
+### Buzzes and Reaction Time
+
+`GameEngine` takes a monotonic `clock` (default `System::nanoTime`). It stamps the opening of each Buzz Window (`QuestionRevealed`, `ResumeTimer` in `ShowingQuestion`, wrong answer with players remaining) and every accepted `PlayerBuzzed` under the engine lock, storing `GameState.buzzes` in arrival order. Times are cleared when a new window opens and on `QuestionSelected` / `SkipRound` / `NextRound`; they stay visible through `ShowingAnswer`. Why host-side timing: `docs/adr/0001-reaction-time-measured-at-host.md`. Terms: `CONTEXT.md`.
 
 ### Networking (planned)
 

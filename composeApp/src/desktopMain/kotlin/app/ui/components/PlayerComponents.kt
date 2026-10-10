@@ -2,6 +2,7 @@
 
 package app.ui.components
 
+import app.state.formatReactionTime
 import app.ui.theme.Palette
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ internal fun PlayerEditorRow(
     onScoreChange: (String) -> Unit,
     onAdjustScore: (Int) -> Unit,
     backgroundColor: Color = Palette.DarkSurface,
+    reactionMillis: Long? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Card(backgroundColor = backgroundColor, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
@@ -74,13 +76,13 @@ internal fun PlayerEditorRow(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+                    PlayerTitle(player, reactionMillis)
                     Button(onClick = { expanded = true }) {
                         Text("Edit")
                     }
                 }
             } else {
-                Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+                PlayerTitle(player, reactionMillis)
                 val buttonEnabled = scoreDelta.isNotBlank() && scoreDelta != "0"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -116,5 +118,13 @@ internal fun PlayerEditorRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PlayerTitle(player: Player, reactionMillis: Long?) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
+        reactionMillis?.let { Text(formatReactionTime(it), color = Palette.SecondaryText) }
     }
 }

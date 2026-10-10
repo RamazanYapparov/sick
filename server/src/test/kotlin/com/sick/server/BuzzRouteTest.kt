@@ -55,6 +55,7 @@ private fun engineAtShowingQuestion(): Pair<GameEngine, UUID> {
     )
     val engine = GameEngine(pack)
     engine.process(PlayerJoined("Alice"))
+    engine.process(PlayerJoined("Bob"))
     val playerId = engine.state.players.first().id
     engine.process(StartGame)
     engine.process(SelectActivePlayer(playerId))
@@ -77,6 +78,23 @@ class BuzzRouteTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(playerId, engine.state.answeringPlayerId)
+    }
+
+    @Test
+    fun `POST buzz returns 409 for a Late Buzz and records it`() = testApplication {
+        val (engine, aliceId) = engineAtShowingQuestion()
+        val bobId = engine.state.players[1].id
+        application { installBuzzRoute(engine) { true } }
+
+        client.submitForm(url = "/buzz", formParameters = Parameters.build { append("playerId", aliceId.toString()) })
+        val response = client.submitForm(
+            url = "/buzz",
+            formParameters = Parameters.build { append("playerId", bobId.toString()) },
+        )
+
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertEquals(aliceId, engine.state.answeringPlayerId)
+        assertEquals(listOf(aliceId, bobId), engine.state.buzzes.map { it.playerId })
     }
 
     @Test

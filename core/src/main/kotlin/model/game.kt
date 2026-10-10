@@ -17,6 +17,10 @@ data class GameState(
     val isTimerPaused: Boolean = false,
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),
     val skipVotePlayerIds: Set<UUID> = emptySet(),
+    /** Monotonic-clock nanos when the current Buzz Window opened; null before the first reveal of a question. */
+    val buzzWindowOpenedAtNanos: Long? = null,
+    /** Buzzes of the current Buzz Window in arrival order: the Answering Player's first, then Late Buzzes. */
+    val buzzes: List<Buzz> = emptyList(),
 ) {
     val currentRound: Round? get() = pack.rounds.getOrNull(currentRoundIndex)
 
@@ -31,6 +35,9 @@ data class GameState(
 
     fun findPlayer(id: UUID): Player? = players.find { it.id == id }
 }
+
+/** A Buzz accepted in the current Buzz Window, with its Reaction Time. */
+data class Buzz(val playerId: UUID, val reactionMillis: Long)
 
 /**
  * Returns true if every player has either failed their buzz-in or skipped (voted

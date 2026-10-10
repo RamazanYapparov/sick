@@ -37,9 +37,14 @@ fun Application.installBuzzRoute(engine: GameEngine, buzzAllowed: () -> Boolean)
                     logger.warn { "/buzz playerId=$playerId rejected: ${error.message}" }
                     call.respond(HttpStatusCode.BadRequest, error.message)
                 },
-                ifRight = {
-                    logger.info { "/buzz playerId=$playerId OK" }
-                    call.respond(HttpStatusCode.OK)
+                ifRight = { state ->
+                    if (state.answeringPlayerId == playerId) {
+                        logger.info { "/buzz playerId=$playerId OK" }
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        logger.info { "/buzz playerId=$playerId late buzz recorded" }
+                        call.respond(HttpStatusCode.Conflict, "Too slow")
+                    }
                 },
             )
         }

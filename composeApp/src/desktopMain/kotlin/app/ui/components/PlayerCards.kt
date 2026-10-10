@@ -1,5 +1,6 @@
 package app.ui.components
 
+import app.state.formatReactionTime
 import app.ui.theme.Palette
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ internal fun PlayerCards(
     answeringPlayerId: UUID?,
     skipVotePlayerIds: Set<UUID>,
     failedBuzzPlayerIds: Set<UUID>,
+    reactionTimes: Map<UUID, Long>,
     compact: Boolean,
 ) {
     Row(
@@ -69,6 +71,9 @@ internal fun PlayerCards(
                 ) {
                     Text(player.name, fontSize = textSize, color = nameColor, fontWeight = nameFontWeight)
                     Text("${player.score}", fontSize = textSize, color = scoreColor, fontWeight = FontWeight.Bold)
+                    reactionTimes[player.id]?.let { millis ->
+                        Text(formatReactionTime(millis), fontSize = if (compact) 10.sp else 13.sp, color = nameColor)
+                    }
                 }
             }
         }

@@ -20,6 +20,8 @@ data class DesktopUiState(
     val answeringPlayerId: UUID?,
     val skipVotePlayerIds: Set<UUID> = emptySet(),
     val failedBuzzPlayerIds: Set<UUID> = emptySet(),
+    /** Reaction Time in milliseconds per player who buzzed in the current Buzz Window. */
+    val reactionTimes: Map<UUID, Long> = emptyMap(),
     val roundName: String?,
     val currentRoundIndex: Int,
     val totalRounds: Int,
@@ -106,6 +108,7 @@ fun DesktopUiState.withEngineSnapshot(
         answeringPlayerId = state.answeringPlayerId,
         skipVotePlayerIds = state.skipVotePlayerIds,
         failedBuzzPlayerIds = state.failedBuzzPlayerIds,
+        reactionTimes = state.buzzes.associate { it.playerId to it.reactionMillis },
         roundName = state.currentRound?.name,
         currentRoundIndex = if (hasPack) state.currentRoundIndex + 1 else 0,
         totalRounds = pack.rounds.size,
@@ -134,3 +137,7 @@ fun DesktopUiState.withEngineSnapshot(
 
 private fun findThemeName(round: Round?, questionId: UUID): String? =
     round?.themes?.firstOrNull { theme -> theme.questions.any { it.id == questionId } }?.name
+
+/** Reaction Time as seconds with millisecond precision, e.g. `2.340 s`. */
+fun formatReactionTime(millis: Long): String =
+    "${millis / 1000}.${(millis % 1000).toString().padStart(3, '0')} s"

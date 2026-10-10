@@ -88,7 +88,7 @@ internal fun SharedDisplayScreen(
                     BoardOverview(state, compact)
             }
             }
-            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, compact)
+            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, state.reactionTimes, compact)
         }
     }
 }

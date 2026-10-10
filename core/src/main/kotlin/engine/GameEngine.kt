@@ -22,7 +22,11 @@ sealed class GameError(val message: String) {
     class QuestionNotFound(id: UUID) : GameError("Question $id not found")
 }
 
-class GameEngine(pack: Package) {
+/**
+ * [clock] is a monotonic nanosecond source used only to measure Reaction Time
+ * (see docs/adr/0001-reaction-time-measured-at-host.md); tests inject a fake one.
+ */
+class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime) {
 
     private val lock = Any()
 
@@ -106,6 +110,7 @@ class GameEngine(pack: Package) {
                 AdjustPlayerScore::class,
             )
             GamePhase.PlayerAnswering -> setOf(
+                PlayerBuzzed::class,
                 HostAccepted::class,
                 HostRejected::class,
                 SkipQuestion::class,
@@ -150,18 +155,30 @@ class GameEngine(pack: Package) {
                     isTimerPaused = false,
                     failedBuzzPlayerIds = emptySet(),
                     skipVotePlayerIds = emptySet(),
+                    buzzWindowOpenedAtNanos = null,
+                    buzzes = emptyList(),
                 )
             }
 
-            is QuestionRevealed -> _state
+            is QuestionRevealed -> _state.withOpenBuzzWindow()
 
+            // Both a phone Buzz and a Host Pick arrive here. In ShowingQuestion the
+            // first one makes the Answering Player; in PlayerAnswering it is a Late Buzz.
             is PlayerBuzzed -> {
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
-                _state.copy(
-                    answeringPlayerId = event.playerId,
-                    answerTimerRemaining = _state.answerTimerSeconds,
-                )
+                ensure(_state.buzzes.none { it.playerId == event.playerId }) { GameError.InvalidEvent(event, _phase) }
+                val openedAt = ensureNotNull(_state.buzzWindowOpenedAtNanos) { GameError.InvalidEvent(event, _phase) }
+                val buzzes = _state.buzzes + Buzz(event.playerId, (clock() - openedAt) / 1_000_000)
+                if (_phase == GamePhase.ShowingQuestion) {
+                    _state.copy(
+                        answeringPlayerId = event.playerId,
+                        answerTimerRemaining = _state.answerTimerSeconds,
+                        buzzes = buzzes,
+                    )
+                } else {
+                    _state.copy(buzzes = buzzes)
+                }
             }
 
             is PlayerSkipped -> {
@@ -182,7 +199,13 @@ class GameEngine(pack: Package) {
             }
 
             is PauseTimer -> _state.copy(isTimerPaused = true)
-            is ResumeTimer -> _state.copy(isTimerPaused = false)
+            // Resuming a paused question opens a fresh Buzz Window; resuming while
+            // a player answers keeps the current one.
+            is ResumeTimer -> if (_phase == GamePhase.ShowingQuestion) {
+                _state.copy(isTimerPaused = false).withOpenBuzzWindow()
+            } else {
+                _state.copy(isTimerPaused = false)
+            }
             is TimerTick -> if (_state.isTimerPaused) {
                 _state
             } else {
@@ -241,6 +264,8 @@ class GameEngine(pack: Package) {
                     timerRemaining = 0,
                     isTimerPaused = false,
                     failedBuzzPlayerIds = emptySet(),
+                    buzzWindowOpenedAtNanos = null,
+                    buzzes = emptyList(),
                 )
             }
 
@@ -248,7 +273,11 @@ class GameEngine(pack: Package) {
                 player.copy(score = player.score + event.delta)
             }.mapLeft { GameError.PlayerError(it) }.bind()
 
-            is NextRound -> _state.copy(currentRoundIndex = _state.currentRoundIndex + 1)
+            is NextRound -> _state.copy(
+                currentRoundIndex = _state.currentRoundIndex + 1,
+                buzzWindowOpenedAtNanos = null,
+                buzzes = emptyList(),
+            )
         }
     }
 
@@ -283,9 +312,12 @@ class GameEngine(pack: Package) {
                 answeringPlayerId = null,
                 failedBuzzPlayerIds = newFailedIds,
                 answerTimerRemaining = _state.answerTimerSeconds,
-            )
+            ).withOpenBuzzWindow()
         }
     }
+
+    private fun GameState.withOpenBuzzWindow(): GameState =
+        copy(buzzWindowOpenedAtNanos = clock(), buzzes = emptyList())
 
     private fun nextPhase(event: GameEvent, oldState: GameState): GamePhase = when (event) {
         is StartGame -> GamePhase.ChoosingPlayer

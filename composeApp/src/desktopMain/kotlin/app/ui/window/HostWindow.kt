@@ -98,6 +98,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                     onScoreChange = { scoreDrafts[scoreKey] = it },
                                     onAdjustScore = { controller.adjustScore(player.id, it) },
                                     backgroundColor = playerBg,
+                                    reactionMillis = state.reactionTimes[player.id],
                                 )
                             }
                         }

@@ -252,6 +252,7 @@ class DesktopSessionController(
                             "Simple(right=${a.right}, wrong=${a.wrong}$c)"
                         }
                         is Answer.Select -> "Select(options=${a.options.map { "${it.name}=${it.answer}" }})"
+                        is Answer.Point -> a.toString()
                     }
                     logger.info { "      [${q.price}] ${q.type::class.simpleName} | Content: $contentSummary | Answer: $answerSummary" }
                 }

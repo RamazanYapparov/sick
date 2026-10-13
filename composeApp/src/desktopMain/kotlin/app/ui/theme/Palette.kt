@@ -49,6 +49,9 @@ object Palette {
     // Round badge
     val FinalBadge = Color(0xFFFF6B35)
 
+    // Point answer marker drawn over the question image
+    val AnswerPoint = Color(0xFFFF3B30)
+
     // Media player
     val MediaBg = Color(0xFF1A2A35)
     val MediaTrack = Color(0xFF0D1C24)

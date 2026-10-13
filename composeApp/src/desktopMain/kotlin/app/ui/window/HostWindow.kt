@@ -155,7 +155,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                     if (state.currentQuestion != null) {
                         if (state.phase == GamePhase.ShowingAnswer) {
                             AnswerPanel(
-                                answer = state.currentQuestion.answer,
+                                question = state.currentQuestion,
                                 basePath = state.extractedBasePath,
                                 compact = true,
                                 bodySize = 12.sp,
@@ -181,6 +181,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 timerSize = 24.sp,
                                 audioPlayback = controller.audioPlayback,
                                 onMediaFinished = controller::mediaFinished,
+                                revealAnswerPoint = true,
                             )
                         }
                     } else {

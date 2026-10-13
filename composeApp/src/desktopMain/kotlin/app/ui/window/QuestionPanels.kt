@@ -3,7 +3,9 @@ package app.ui.window
 import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
+import app.state.coordinatesLabel
 import app.state.displayContents
+import app.state.isImage
 import app.ui.media.AudioPlayer
 import app.ui.media.AudioProgress
 import app.ui.media.VideoPlayer
@@ -27,7 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +42,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sick.model.Answer
+import com.sick.model.Question
 import java.nio.file.Path
 
 /**
@@ -69,7 +77,7 @@ internal fun RevealingQuestionPlaceholder(state: DesktopUiState, compact: Boolea
 
 @Composable
 internal fun AnswerPanel(
-    answer: Answer,
+    question: Question<*>,
     basePath: Path?,
     compact: Boolean,
     bodySize: TextUnit,
@@ -78,7 +86,7 @@ internal fun AnswerPanel(
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
 ) {
-    @Suppress("UNUSED_LOCAL_VARIABLE") val reservedForFuture = basePath
+    val answer = question.answer
     Card(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = Palette.DarkSurface,
@@ -132,11 +140,34 @@ internal fun AnswerPanel(
                         revealCorrect = true,
                     )
                 }
+                is Answer.Point -> {
+                    val image = remember(question, basePath) {
+                        question.displayContents(basePath).firstOrNull { it.isImage() }
+                    }
+                    if (image != null) {
+                        RenderQuestionDisplayItem(
+                            item = image,
+                            compact = compact,
+                            bodySize = bodySize,
+                            audioPlayback = audioPlayback,
+                            point = answer,
+                        )
+                    } else {
+                        Text(
+                            "Point: ${answer.coordinatesLabel()} (question has no image)",
+                            fontSize = bodySize,
+                            color = Palette.PlayerAnsweringText,
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+/**
+ * [point] marks a [Answer.Point] on image items; other item types ignore it.
+ */
 @Composable
 internal fun RenderQuestionDisplayItem(
     item: QuestionDisplayItem,
@@ -146,6 +177,7 @@ internal fun RenderQuestionDisplayItem(
     onMediaFinished: () -> Unit = {},
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
+    point: Answer.Point? = null,
 ) {
     when (item) {
         is QuestionDisplayItem.Text ->
@@ -163,16 +195,7 @@ internal fun RenderQuestionDisplayItem(
                 }.getOrNull()
             }
             if (bitmap != null)
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    // Always render the full image (no crop, no stretch).
-                    // `Fit` scales the bitmap to fit within the available
-                    // bounds while maintaining aspect ratio, so the entire
-                    // image is always visible (letterboxed if needed).
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.Fit,
-                )
+                ImageItem(bitmap, point)
             else
                 Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
         }
@@ -183,16 +206,7 @@ internal fun RenderQuestionDisplayItem(
                 }.getOrNull()
             }
             if (bitmap != null)
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    // Always render the full image (no crop, no stretch).
-                    // `Fit` scales the bitmap to fit within the available
-                    // bounds while maintaining aspect ratio, so the entire
-                    // image is always visible (letterboxed if needed).
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.Fit,
-                )
+                ImageItem(bitmap, point)
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
@@ -257,6 +271,53 @@ internal fun RenderQuestionDisplayItem(
             mediaPaused = mediaPaused,
         )
     }
+}
+
+@Composable
+private fun ImageItem(bitmap: ImageBitmap, point: Answer.Point?) {
+    Image(
+        bitmap = bitmap,
+        contentDescription = null,
+        // Always render the full image (no crop, no stretch).
+        // `Fit` scales the bitmap to fit within the available
+        // bounds while maintaining aspect ratio, so the entire
+        // image is always visible (letterboxed if needed).
+        modifier = Modifier.fillMaxWidth().then(
+            if (point != null) Modifier.drawWithContent {
+                drawContent()
+                drawAnswerPoint(point, bitmap.width.toFloat(), bitmap.height.toFloat())
+            } else Modifier
+        ),
+        contentScale = ContentScale.Fit,
+    )
+}
+
+/** The marker stroke is this fraction of the image's shorter side, but at least [MIN_POINT_STROKE_PX]. */
+private const val POINT_STROKE_SHARE = 1f / 150f
+private const val MIN_POINT_STROKE_PX = 2f
+private const val POINT_DOT_RADIUS_IN_STROKES = 2.5f
+private const val POINT_AREA_ALPHA = 0.2f
+
+/**
+ * Draws [point] over a bitmap of [bitmapWidth] x [bitmapHeight] that
+ * `ContentScale.Fit` centred in this draw scope. The accepted area is a
+ * circle of `deviation` times the image's shorter side, as SIQuester draws it.
+ */
+private fun DrawScope.drawAnswerPoint(point: Answer.Point, bitmapWidth: Float, bitmapHeight: Float) {
+    val scale = minOf(size.width / bitmapWidth, size.height / bitmapHeight)
+    val width = bitmapWidth * scale
+    val height = bitmapHeight * scale
+    val center = Offset(
+        x = (size.width - width) / 2 + point.x.toFloat() * width,
+        y = (size.height - height) / 2 + point.y.toFloat() * height,
+    )
+    val radius = point.deviation.toFloat() * minOf(width, height)
+    val stroke = maxOf(MIN_POINT_STROKE_PX, minOf(width, height) * POINT_STROKE_SHARE)
+    if (radius > 0f) {
+        drawCircle(Palette.AnswerPoint.copy(alpha = POINT_AREA_ALPHA), radius, center)
+        drawCircle(Palette.AnswerPoint, radius, center, style = Stroke(width = stroke))
+    }
+    drawCircle(Palette.AnswerPoint, stroke * POINT_DOT_RADIUS_IN_STROKES, center)
 }
 
 @Composable

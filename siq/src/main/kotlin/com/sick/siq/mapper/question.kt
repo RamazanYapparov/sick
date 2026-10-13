@@ -31,8 +31,8 @@ fun XmlNumberSet.toPricingRule() = Question.Type.Secret.PricingRule(
     minimum = minimum, maximum = maximum, step = step
 )
 
-fun XmlQuestion.toAnswer() = if (findParamByName("answerType")?.value == "select") {
-    Answer.Select(
+fun XmlQuestion.toAnswer(): Answer = when (findParamByName("answerType")?.value) {
+    "select" -> Answer.Select(
         firstParamByName("answerOptions")?.param.orEmpty().map {
             Answer.Select.Option(
                 name = it.name,
@@ -41,11 +41,26 @@ fun XmlQuestion.toAnswer() = if (findParamByName("answerType")?.value == "select
             )
         }
     )
-} else {
-    Answer.Simple(
-        right = right.answer,
-        wrong = wrong?.answer.orEmpty(),
-        contents = findParamByName("answer")?.item.orEmpty().mapNotNull { it.toContentOrNull() },
+    "point" -> toPointAnswer() ?: toSimpleAnswer()
+    else -> toSimpleAnswer()
+}
+
+private fun XmlQuestion.toSimpleAnswer() = Answer.Simple(
+    right = right.answer,
+    wrong = wrong?.answer.orEmpty(),
+    contents = findParamByName("answer")?.item.orEmpty().mapNotNull { it.toContentOrNull() },
+)
+
+/** Parses `x,y[,aspectRatio]` as written by SIQuester; null when the answer is malformed. */
+private fun XmlQuestion.toPointAnswer(): Answer.Point? {
+    val raw = right.answer.firstOrNull() ?: return null
+    val parts = raw.split(',').map { it.trim().toDoubleOrNull() ?: return null }
+    if (parts.size !in 2..3) return null
+    return Answer.Point(
+        x = parts[0],
+        y = parts[1],
+        aspectRatio = parts.getOrNull(2) ?: 1.0,
+        deviation = findParamByName("answerDeviation")?.value?.trim()?.toDoubleOrNull() ?: 0.0,
     )
 }
 

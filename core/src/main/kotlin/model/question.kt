@@ -66,4 +66,17 @@ sealed interface Answer {
             val correct: Boolean,
         )
     }
+
+    /**
+     * A spot on the first image of the question. [x] and [y] are fractions
+     * (0..1) of the image width and height from its top-left corner.
+     * [aspectRatio] is the image width / height recorded by the pack editor.
+     * [deviation] is the accepted radius as a fraction of the image's shorter side.
+     */
+    data class Point(
+        val x: Double,
+        val y: Double,
+        val aspectRatio: Double,
+        val deviation: Double,
+    ) : Answer
 }

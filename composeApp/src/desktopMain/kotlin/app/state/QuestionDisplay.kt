@@ -56,3 +56,6 @@ fun displayContents(contents: List<Content>, basePath: Path?): List<QuestionDisp
     }
 
 fun Question<*>.displayContents(basePath: Path?) = displayContents(contents, basePath)
+
+fun QuestionDisplayItem.isImage(): Boolean =
+    this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage

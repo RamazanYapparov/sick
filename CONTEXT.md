@@ -29,3 +29,9 @@ _Avoid_: Too slow, rejected buzz, queued buzz
 **Host Pick**:
 The host manually choosing the Answering Player instead of waiting for a Buzz. It counts as that player's Buzz at the moment of the pick, so it has a Reaction Time.
 _Avoid_: Manual buzz
+
+### Questions
+
+**Point Answer**:
+An answer that is a spot on the question image (SIQ `answerType="point"`), with an accepted radius (`answerDeviation`). The host sees the spot marked on the image while the question plays; the shared display marks it only when the answer is shown. Players answer aloud and the host judges.
+_Avoid_: Coordinates answer, map answer

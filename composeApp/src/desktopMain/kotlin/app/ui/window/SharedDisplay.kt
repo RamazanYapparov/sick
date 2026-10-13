@@ -8,6 +8,7 @@ import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
+import app.state.isImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,7 +71,7 @@ internal fun SharedDisplayScreen(
             when {
                 state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
                     AnswerPanel(
-                        state.currentQuestion.answer,
+                        state.currentQuestion,
                         state.extractedBasePath,
                         compact,
                         bodySize,
@@ -271,6 +272,10 @@ internal fun SelectOptionsList(
     }
 }
 
+/**
+ * [revealAnswerPoint] marks a [Answer.Point] on the question image; only the
+ * host view sets it, so the room does not see the answer before it is shown.
+ */
 @Composable
 internal fun CurrentQuestionPanel(
     state: DesktopUiState,
@@ -279,11 +284,14 @@ internal fun CurrentQuestionPanel(
     timerSize: TextUnit,
     audioPlayback: AudioPlaybackState,
     onMediaFinished: () -> Unit = {},
+    revealAnswerPoint: Boolean = false,
 ) {
     val question = state.currentQuestion ?: return
     val contents = remember(question, state.extractedBasePath) {
         question.displayContents(state.extractedBasePath)
     }
+    val answerPoint = (question.answer as? Answer.Point)?.takeIf { revealAnswerPoint }
+    val pointImage = if (answerPoint != null) contents.firstOrNull { it.isImage() } else null
 
     Card(
         modifier = Modifier.fillMaxSize(),
@@ -343,6 +351,7 @@ internal fun CurrentQuestionPanel(
                     onMediaFinished = onMediaFinished,
                     mediaStopSignal = state.mediaStopSignal,
                     mediaPaused = state.mediaPaused,
+                    point = answerPoint.takeIf { item === pointImage },
                 )
             }
         }
@@ -442,6 +451,3 @@ private fun QuestionContent(
         }
     }
 }
-
-private fun QuestionDisplayItem.isImage(): Boolean =
-    this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage

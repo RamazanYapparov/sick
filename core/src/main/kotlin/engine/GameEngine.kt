@@ -132,6 +132,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             is PauseTimer -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
             is ResumeTimer -> if (!_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
             is PlayerBuzzed -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
+            // A paused answer timer cannot expire; a stale expiry must not penalise the player.
+            is AnswerTimerExpired -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
             else -> null
         }
     }

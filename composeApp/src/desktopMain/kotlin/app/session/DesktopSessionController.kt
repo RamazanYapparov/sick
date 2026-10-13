@@ -162,7 +162,12 @@ class DesktopSessionController(
     fun adjustScore(playerId: UUID, delta: Int) = dispatch(AdjustPlayerScore(playerId, delta))
 
     fun pauseTimer() = dispatch(PauseTimer, setMediaPaused = true)
-    fun resumeTimer() = dispatch(ResumeTimer, setMediaPaused = false)
+    // Media paused by a buzz stays paused while the player answers; onPhaseChange
+    // resumes it when the phase leaves PlayerAnswering.
+    fun resumeTimer() = dispatch(
+        ResumeTimer,
+        setMediaPaused = if (engine.phase == GamePhase.PlayerAnswering) null else false,
+    )
 
     fun toggleShowCompleted() {
         showCompleted = !showCompleted

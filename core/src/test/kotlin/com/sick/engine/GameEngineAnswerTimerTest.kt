@@ -65,6 +65,21 @@ class GameEngineAnswerTimerTest {
     }
 
     @Test
+    fun `AnswerTimerExpired while paused keeps the player answering without penalty`() {
+        val (engine, alice, _) = engineWithTwoPlayers()
+        engine.advanceToPlayerAnswering(alice)
+        engine.process(PauseTimer)
+
+        val result = engine.process(AnswerTimerExpired)
+
+        assertIs<GameError.InvalidEvent>(result.leftOrNull())
+        assertEquals(GamePhase.PlayerAnswering, engine.phase)
+        assertEquals(alice.id, engine.state.answeringPlayerId)
+        assertEquals(0, engine.state.findPlayer(alice.id)!!.score)
+        assertTrue(alice.id !in engine.state.failedBuzzPlayerIds)
+    }
+
+    @Test
     fun `AnswerTimerRemaining does not go below zero`() {
         val (engine, alice, _) = engineWithTwoPlayers()
         engine.advanceToPlayerAnswering(alice)

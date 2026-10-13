@@ -80,16 +80,20 @@ class TimerOrchestrator(
                 }
             }
             GamePhase.PlayerAnswering -> {
-                // Buzz-in to PlayerAnswering: stop the question timer (it otherwise
-                // keeps firing TimerTick events that the engine would reject while
-                // in PlayerAnswering) and start the answer timer fresh. start()
-                // calls stop() internally, so answerTimer.stop() is implicit.
+                // Stop the question timer (it otherwise keeps firing TimerTick events
+                // that the engine would reject while in PlayerAnswering). The answer
+                // timer starts fresh on buzz-in, stops on pause and resumes from the
+                // preserved remaining seconds; start(0) expires immediately.
                 timer.stop()
-                if (previous == GamePhase.ShowingQuestion) {
-                    val state = engine.state
-                    val seconds = state.answerTimerRemaining.takeIf { it > 0 } ?: state.answerTimerSeconds
-                    logger.info { "orchestrator: starting answer timer with ${seconds}s" }
-                    answerTimer.start(seconds, offsetSeconds = 0)
+                val state = engine.state
+                when {
+                    state.isTimerPaused -> answerTimer.stop()
+                    wasPaused -> answerTimer.start(state.answerTimerRemaining)
+                    previous == GamePhase.ShowingQuestion -> {
+                        val seconds = state.answerTimerRemaining.takeIf { it > 0 } ?: state.answerTimerSeconds
+                        logger.info { "orchestrator: starting answer timer with ${seconds}s" }
+                        answerTimer.start(seconds, offsetSeconds = 0)
+                    }
                 }
             }
             GamePhase.ShowingQuestion -> {

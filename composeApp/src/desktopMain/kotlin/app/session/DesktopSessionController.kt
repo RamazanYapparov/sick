@@ -67,6 +67,8 @@ class DesktopSessionController(
 
     private var mediaStopSignal = 0
     private var mediaPaused = false
+    private var mediaReplaySignal = 0
+    private var mediaReplaying = false
     private var showCompleted = false
 
     private var stateChangeCount = 0L
@@ -207,14 +209,34 @@ class DesktopSessionController(
         }
     }
 
-    fun mediaFinished() {
-        timerOrchestrator.onMediaFinished()
+    // vlcj reports the end of playback on its own event thread.
+    fun questionMediaFinished() = onEdt {
+        // A replay runs alongside the question timer, so its end starts nothing.
+        if (mediaReplaying) mediaReplaying = false else timerOrchestrator.onQuestionMediaFinished()
+        publishState()
+    }
+
+    fun answerMediaFinished() = onEdt {
+        timerOrchestrator.onAnswerMediaFinished()
         publishState()
     }
 
     fun skipMedia() {
         mediaStopSignal++
-        timerOrchestrator.onMediaFinished()
+        mediaReplaying = false
+        timerOrchestrator.onQuestionMediaFinished()
+        publishState()
+    }
+
+    /**
+     * Restarts the question media from the beginning once its first playback is
+     * over. The question timer keeps running; if it expires mid-replay the
+     * question ends and leaving the question panel disposes the players.
+     */
+    fun replayMedia() {
+        if (engine.phase != GamePhase.ShowingQuestion || engine.state.isTimerPaused || timerOrchestrator.isMediaPending) return
+        mediaReplaySignal++
+        mediaReplaying = true
         publishState()
     }
 
@@ -300,6 +322,7 @@ class DesktopSessionController(
         timerOrchestrator = TimerOrchestrator(timer, answerTimer, engine, scope, ::showAnswer, ::revealQuestion)
         mediaPaused = false
         mediaStopSignal = 0
+        mediaReplaying = false
         bindEngine(engine)
         server.start()
         publishState()
@@ -323,8 +346,9 @@ class DesktopSessionController(
     }
 
     private fun onPhaseChange(previousPhase: GamePhase, newPhase: GamePhase, isMediaActive: Boolean) {
+        if (newPhase != GamePhase.ShowingQuestion && newPhase != GamePhase.PlayerAnswering) mediaReplaying = false
         when {
-            previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && isMediaActive ->
+            previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && (isMediaActive || mediaReplaying) ->
                 mediaPaused = true
             previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingQuestion ->
                 mediaPaused = false
@@ -355,6 +379,8 @@ class DesktopSessionController(
             mediaActive = timerOrchestrator.isMediaPending,
             mediaStopSignal = mediaStopSignal,
             mediaPaused = mediaPaused,
+            mediaReplaySignal = mediaReplaySignal,
+            mediaReplaying = mediaReplaying,
             showCompleted = showCompleted,
             showPackBrowser = uiState.showPackBrowser,
             scannedPacks = scannedPacks,

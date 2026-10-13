@@ -24,7 +24,12 @@ fun HostApp(controller: DesktopSessionController) {
 }
 
 @Composable
-fun SharedDisplayApp(state: DesktopUiState, audioPlayback: AudioPlaybackState, onMediaFinished: () -> Unit = {}) {
+fun SharedDisplayApp(
+    state: DesktopUiState,
+    audioPlayback: AudioPlaybackState,
+    onQuestionMediaFinished: () -> Unit,
+    onAnswerMediaFinished: () -> Unit,
+) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
             primary = Palette.SharedPrimary,
@@ -35,6 +40,12 @@ fun SharedDisplayApp(state: DesktopUiState, audioPlayback: AudioPlaybackState, o
             onBackground = Palette.ThemeOnBackground,
         )
     ) {
-        SharedDisplayScreen(state = state, compact = false, audioPlayback = audioPlayback, onMediaFinished = onMediaFinished)
+        SharedDisplayScreen(
+            state = state,
+            compact = false,
+            audioPlayback = audioPlayback,
+            onQuestionMediaFinished = onQuestionMediaFinished,
+            onAnswerMediaFinished = onAnswerMediaFinished,
+        )
     }
 }

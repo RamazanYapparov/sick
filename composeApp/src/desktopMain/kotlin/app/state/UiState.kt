@@ -35,6 +35,10 @@ data class DesktopUiState(
     val mediaActive: Boolean,
     val mediaStopSignal: Int,
     val mediaPaused: Boolean,
+    /** Bumped by every host replay; media items are keyed on it so a replay restarts them. */
+    val mediaReplaySignal: Int,
+    /** A host replay of the question media is playing; the question timer runs meanwhile. */
+    val mediaReplaying: Boolean,
     val errorMessage: String?,
     val infoMessage: String?,
     val serverUrl: String,
@@ -67,6 +71,8 @@ data class DesktopUiState(
             mediaActive = false,
             mediaStopSignal = 0,
             mediaPaused = false,
+            mediaReplaySignal = 0,
+            mediaReplaying = false,
             errorMessage = null,
             infoMessage = null,
             serverUrl = "http://localhost:$port",

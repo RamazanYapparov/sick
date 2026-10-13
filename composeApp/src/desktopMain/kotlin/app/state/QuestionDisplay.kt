@@ -1,5 +1,6 @@
 package app.state
 
+import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.Question
 import java.net.URL
@@ -59,3 +60,11 @@ fun Question<*>.displayContents(basePath: Path?) = displayContents(contents, bas
 
 fun QuestionDisplayItem.isImage(): Boolean =
     this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage
+
+private val PLAYABLE_TYPES = setOf(Content.Type.Video, Content.Type.Audio)
+
+/** The question shows audio or video. */
+fun Question<*>.hasMedia(): Boolean = contents.any { it is Content.Media && it.type in PLAYABLE_TYPES }
+
+/** The answer shows audio or video. */
+fun Answer.hasMedia(): Boolean = this is Answer.Simple && contents.any { it is Content.Media && it.type in PLAYABLE_TYPES }

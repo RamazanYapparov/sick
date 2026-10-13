@@ -26,6 +26,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -167,6 +168,8 @@ internal fun AnswerPanel(
 
 /**
  * [point] marks a [Answer.Point] on image items; other item types ignore it.
+ * Video and audio items are keyed on [mediaReplaySignal]: bumping it disposes
+ * their players and starts fresh ones from the beginning.
  */
 @Composable
 internal fun RenderQuestionDisplayItem(
@@ -177,6 +180,7 @@ internal fun RenderQuestionDisplayItem(
     onMediaFinished: () -> Unit = {},
     mediaStopSignal: Int = 0,
     mediaPaused: Boolean = false,
+    mediaReplaySignal: Int = 0,
     point: Answer.Point? = null,
 ) {
     when (item) {
@@ -210,7 +214,7 @@ internal fun RenderQuestionDisplayItem(
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
-        is QuestionDisplayItem.LocalVideo -> {
+        is QuestionDisplayItem.LocalVideo -> key(mediaReplaySignal) {
             if (compact) {
                 // Compact (host) view: video plays but is muted so audio
                 // stays unique to the shared display window.
@@ -234,7 +238,7 @@ internal fun RenderQuestionDisplayItem(
                 )
             }
         }
-        is QuestionDisplayItem.RemoteVideo -> {
+        is QuestionDisplayItem.RemoteVideo -> key(mediaReplaySignal) {
             if (compact) {
                 VideoPlayer(
                     uri = item.url.toString(),
@@ -254,22 +258,26 @@ internal fun RenderQuestionDisplayItem(
                 )
             }
         }
-        is QuestionDisplayItem.LocalAudio -> AudioItem(
-            uri = item.absolutePath,
-            compact = compact,
-            audioPlayback = audioPlayback,
-            onMediaFinished = onMediaFinished,
-            mediaStopSignal = mediaStopSignal,
-            mediaPaused = mediaPaused,
-        )
-        is QuestionDisplayItem.RemoteAudio -> AudioItem(
-            uri = item.url.toString(),
-            compact = compact,
-            audioPlayback = audioPlayback,
-            onMediaFinished = onMediaFinished,
-            mediaStopSignal = mediaStopSignal,
-            mediaPaused = mediaPaused,
-        )
+        is QuestionDisplayItem.LocalAudio -> key(mediaReplaySignal) {
+            AudioItem(
+                uri = item.absolutePath,
+                compact = compact,
+                audioPlayback = audioPlayback,
+                onMediaFinished = onMediaFinished,
+                mediaStopSignal = mediaStopSignal,
+                mediaPaused = mediaPaused,
+            )
+        }
+        is QuestionDisplayItem.RemoteAudio -> key(mediaReplaySignal) {
+            AudioItem(
+                uri = item.url.toString(),
+                compact = compact,
+                audioPlayback = audioPlayback,
+                onMediaFinished = onMediaFinished,
+                mediaStopSignal = mediaStopSignal,
+                mediaPaused = mediaPaused,
+            )
+        }
     }
 }
 

@@ -1,11 +1,9 @@
 package app.session
 
+import app.state.hasMedia
 import com.sick.engine.GameEngine
 import com.sick.engine.GameTimer
-import com.sick.model.Answer
-import com.sick.model.Content
 import com.sick.model.GameState
-import com.sick.model.Question
 import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -162,14 +160,9 @@ class TimerOrchestrator(
         }
     }
 
-    fun onMediaFinished() {
-        logger.debug { "orchestrator: onMediaFinished, mediaPending=$mediaTimerPending, answerMediaPending=$answerMediaPending" }
-        if (answerMediaPending) {
-            answerMediaPending = false
-            logger.info { "orchestrator: answer media finished, calling onAnswerShown" }
-            onAnswerShown()
-            return
-        }
+    /** The question's media ended (or was skipped): start the question timer it was holding back. */
+    fun onQuestionMediaFinished() {
+        logger.debug { "orchestrator: onQuestionMediaFinished, mediaPending=$mediaTimerPending" }
         if (!mediaTimerPending) return
         mediaTimerPending = false
         val state = engine.state
@@ -177,6 +170,15 @@ class TimerOrchestrator(
             logger.info { "orchestrator: starting timer with ${state.timerRemaining}s remaining" }
             timer.start(state.timerRemaining)
         }
+    }
+
+    /** The answer's media ended: leave ShowingAnswer. A late report after the host moved on is ignored. */
+    fun onAnswerMediaFinished() {
+        logger.debug { "orchestrator: onAnswerMediaFinished, answerMediaPending=$answerMediaPending, phase=${engine.phase}" }
+        if (!answerMediaPending || engine.phase != GamePhase.ShowingAnswer) return
+        answerMediaPending = false
+        logger.info { "orchestrator: answer media finished, calling onAnswerShown" }
+        onAnswerShown()
     }
 
     fun stop() {
@@ -189,9 +191,3 @@ class TimerOrchestrator(
         answerTimer.stop()
     }
 }
-
-private fun Question<*>.hasMedia(): Boolean =
-    contents.any { it is Content.Media && it.type in setOf(Content.Type.Video, Content.Type.Audio) }
-
-private fun Answer.hasMedia(): Boolean =
-    this is Answer.Simple && contents.any { it is Content.Media && it.type in setOf(Content.Type.Video, Content.Type.Audio) }

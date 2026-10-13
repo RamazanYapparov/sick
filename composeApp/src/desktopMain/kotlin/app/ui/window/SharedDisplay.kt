@@ -47,7 +47,8 @@ internal fun SharedDisplayScreen(
     state: DesktopUiState,
     compact: Boolean,
     audioPlayback: AudioPlaybackState,
-    onMediaFinished: () -> Unit = {},
+    onQuestionMediaFinished: () -> Unit,
+    onAnswerMediaFinished: () -> Unit,
 ) {
     val pad = if (compact) 12.dp else 24.dp
     val bodySize = if (compact) 12.sp else 22.sp
@@ -76,14 +77,14 @@ internal fun SharedDisplayScreen(
                         compact,
                         bodySize,
                         audioPlayback = audioPlayback,
-                        onMediaFinished = onMediaFinished,
+                        onMediaFinished = onAnswerMediaFinished,
                         mediaStopSignal = state.mediaStopSignal,
                         mediaPaused = state.mediaPaused,
                     )
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
-                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onMediaFinished)
+                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onQuestionMediaFinished)
                 state.phase == GamePhase.Lobby && state.hasPack ->
                     LobbyPanel(state, compact)
                 else ->
@@ -351,6 +352,7 @@ internal fun CurrentQuestionPanel(
                     onMediaFinished = onMediaFinished,
                     mediaStopSignal = state.mediaStopSignal,
                     mediaPaused = state.mediaPaused,
+                    mediaReplaySignal = state.mediaReplaySignal,
                     point = answerPoint.takeIf { item === pointImage },
                 )
             }

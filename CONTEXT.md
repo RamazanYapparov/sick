@@ -35,3 +35,7 @@ _Avoid_: Manual buzz
 **Point Answer**:
 An answer that is a spot on the question image (SIQ `answerType="point"`), with an accepted radius (`answerDeviation`). The host sees the spot marked on the image while the question plays; the shared display marks it only when the answer is shown. Players answer aloud and the host judges.
 _Avoid_: Coordinates answer, map answer
+
+**Media Replay**:
+The host restarting the question's audio or video from the beginning after its first playback has ended. The question timer keeps running: if it expires during a replay, the replay stops and the question ends. A Buzz pauses a replay the same way it pauses the first playback.
+_Avoid_: Repeat, replay sound

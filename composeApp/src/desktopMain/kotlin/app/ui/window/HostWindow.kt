@@ -160,7 +160,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 compact = true,
                                 bodySize = 12.sp,
                                 audioPlayback = controller.audioPlayback,
-                                onMediaFinished = controller::mediaFinished,
+                                onMediaFinished = controller::answerMediaFinished,
                                 mediaStopSignal = state.mediaStopSignal,
                                 mediaPaused = state.mediaPaused,
                             )
@@ -180,7 +180,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 bodySize = 12.sp,
                                 timerSize = 24.sp,
                                 audioPlayback = controller.audioPlayback,
-                                onMediaFinished = controller::mediaFinished,
+                                onMediaFinished = controller::questionMediaFinished,
                                 revealAnswerPoint = true,
                             )
                         }

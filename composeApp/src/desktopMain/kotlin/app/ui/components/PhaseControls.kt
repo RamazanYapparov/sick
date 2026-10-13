@@ -3,6 +3,7 @@ package app.ui.components
 import app.ui.theme.Palette
 import app.session.DesktopSessionController
 import app.state.DesktopUiState
+import app.state.hasMedia
 import app.state.hostSummary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -67,9 +68,14 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                             Text("Pause")
                         }
                     }
-                    if (state.mediaActive) {
+                    if (state.mediaActive || state.mediaReplaying) {
                         Button(onClick = controller::skipMedia) {
                             Text("Skip Media")
+                        }
+                    }
+                    if (!state.mediaActive && state.currentQuestion?.hasMedia() == true) {
+                        Button(onClick = controller::replayMedia, enabled = !state.isTimerPaused) {
+                            Text("Replay Media")
                         }
                     }
                     Button(onClick = controller::skipQuestion) {

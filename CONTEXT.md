@@ -39,3 +39,9 @@ _Avoid_: Coordinates answer, map answer
 **Media Replay**:
 The host restarting the question's audio or video from the beginning after its first playback has ended. The question timer keeps running: if it expires during a replay, the replay stops and the question ends. A Buzz pauses a replay the same way it pauses the first playback.
 _Avoid_: Repeat, replay sound
+
+### Judging
+
+**Score Multiplier**:
+The scale (x0.5, x1 or x2) the host applies to the question price when accepting an answer. x0.5 rounds up, so an odd price never drops its last point. Only the host's controls show the multiplier; the shared display and phones see just the resulting score. A wrong answer always costs the full price.
+_Avoid_: Bonus, coefficient

@@ -2,6 +2,7 @@ package com.sick.engine
 
 import com.sick.event.*
 import com.sick.model.Player
+import com.sick.service.ScoreMultiplier
 import com.sick.state.GamePhase
 import com.sick.test.QUESTION_IDS
 import com.sick.test.minimalPackage
@@ -35,7 +36,7 @@ class GameEngineQuestionFlowTest {
         process(QuestionSelected(QUESTION_IDS[0][0]))
         process(QuestionRevealed)
         process(PlayerBuzzed(player.id))
-        process(HostAccepted)
+        process(HostAccepted())
     }
 
     @Test
@@ -258,13 +259,28 @@ class GameEngineQuestionFlowTest {
         engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
 
-        val result = engine.process(HostAccepted)
+        val result = engine.process(HostAccepted())
 
         assertTrue(result.isRight())
         assertEquals(100, engine.state.findPlayer(player.id)!!.score)
         assertNull(engine.state.answeringPlayerId)
         assertNotNull(engine.state.currentQuestion)
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
+    }
+
+    @Test
+    fun `HostAccepted multiplier scales the awarded score`() {
+        for ((multiplier, expected) in listOf(ScoreMultiplier.HALF to 50, ScoreMultiplier.DOUBLE to 200)) {
+            val (engine, player) = engineWithPlayer()
+            engine.process(SelectActivePlayer(player.id))
+            engine.process(QuestionSelected(QUESTION_IDS[0][0]))  // price = 100
+            engine.process(QuestionRevealed)
+            engine.process(PlayerBuzzed(player.id))
+
+            engine.process(HostAccepted(multiplier))
+
+            assertEquals(expected, engine.state.findPlayer(player.id)!!.score, "$multiplier")
+        }
     }
 
     @Test
@@ -348,7 +364,7 @@ class GameEngineQuestionFlowTest {
         engine.process(QuestionSelected(QUESTION_IDS[0][0]))
         engine.process(QuestionRevealed)
         engine.process(PlayerBuzzed(player.id))
-        engine.process(HostAccepted)
+        engine.process(HostAccepted())
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
 
         engine.process(AnswerShown)

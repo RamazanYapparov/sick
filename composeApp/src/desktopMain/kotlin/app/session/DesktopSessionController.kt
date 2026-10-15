@@ -34,6 +34,7 @@ import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.Package
 import com.sick.server.GameServer
+import com.sick.service.ScoreMultiplier
 import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -156,7 +157,7 @@ class DesktopSessionController(
         dispatch(QuestionSelected(questionId))
     }
     fun chooseAnsweringPlayer(playerId: UUID) = dispatch(PlayerBuzzed(playerId))
-    fun markAnswerCorrect() = dispatch(HostAccepted)
+    fun markAnswerCorrect(multiplier: ScoreMultiplier) = dispatch(HostAccepted(multiplier))
     fun markAnswerWrong() = dispatch(HostRejected)
     fun skipAnswer() = dispatch(HostSkippedAnswer)
     fun skipQuestion() = dispatch(SkipQuestion)

@@ -235,7 +235,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             is HostAccepted -> {
                 val playerId = ensureNotNull(_state.answeringPlayerId) { GameError.InvalidEvent(event, _phase) }
                 val question  = ensureNotNull(_state.currentQuestion)  { GameError.InvalidEvent(event, _phase) }
-                _state.updatePlayerScore(playerId) { it.addScore(question.price) }
+                _state.updatePlayerScore(playerId) { it.addScore(question.price, event.multiplier) }
                     .mapLeft { GameError.PlayerError(it) }
                     .bind()
                     .copy(

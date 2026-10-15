@@ -172,7 +172,7 @@ class GameEngineAnswerTimerTest {
     fun `AnswerTimerExpired rejected when no answeringPlayerId set`() {
         val (engine, alice, _) = engineWithTwoPlayers()
         engine.advanceToPlayerAnswering(alice)
-        engine.process(HostAccepted)  // clears answeringPlayerId
+        engine.process(HostAccepted())  // clears answeringPlayerId
         // Now engine is in ShowingAnswer; replay AnswerTimerExpired — should be either
         // accepted (showingAnswer) or rejected (no answering player). Either way, the
         // answer timer state must NOT change in a way that breaks invariants.
@@ -193,7 +193,7 @@ class GameEngineAnswerTimerTest {
         repeat(5) { engine.process(AnswerTimerTick) }
         assertEquals(15, engine.state.answerTimerRemaining)
         // Now move off the question via AnswerShown, then re-select a different question.
-        engine.process(HostAccepted)
+        engine.process(HostAccepted())
         engine.process(AnswerShown)
         engine.process(QuestionSelected(QUESTION_IDS[0][1]))
         assertEquals(20, engine.state.answerTimerRemaining)

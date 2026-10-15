@@ -1,5 +1,6 @@
 package com.sick.event
 
+import com.sick.service.ScoreMultiplier
 import java.util.UUID
 
 sealed interface GameEvent
@@ -27,7 +28,8 @@ data object AnswerTimerExpired : GameEvent
 data object SkipQuestion : GameEvent
 
 // Host judging
-data object HostAccepted : GameEvent
+/** Host accepts the answer: the Answering Player gains the question price scaled by [multiplier]. */
+data class HostAccepted(val multiplier: ScoreMultiplier = ScoreMultiplier.FULL) : GameEvent
 data object HostRejected : GameEvent
 /** Host dismisses the answer without scoring: the player is out for this question, others may still buzz. */
 data object HostSkippedAnswer : GameEvent

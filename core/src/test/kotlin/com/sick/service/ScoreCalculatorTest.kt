@@ -23,6 +23,12 @@ class ScoreCalculatorTest {
     }
 
     @Test
+    fun `HALF multiplier rounds odd prices up`() {
+        assertEquals(13, player.addScore(25, ScoreMultiplier.HALF).score)
+        assertEquals(1, player.addScore(1, ScoreMultiplier.HALF).score)
+    }
+
+    @Test
     fun `subtractScore with FULL multiplier subtracts full price`() {
         assertEquals(-100, player.subtractScore(100).score)
     }

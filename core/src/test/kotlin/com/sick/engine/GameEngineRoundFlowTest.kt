@@ -24,7 +24,7 @@ class GameEngineRoundFlowTest {
         process(QuestionSelected(QUESTION_IDS[roundIdx][questionIdx]))
         process(QuestionRevealed)
         process(PlayerBuzzed(player.id))
-        process(HostAccepted)
+        process(HostAccepted())
         process(AnswerShown)
     }
 

@@ -110,7 +110,7 @@ class GameEngineReactionTimeTest {
         revealAt(0)
         buzzAt(10, alice)
         buzzAt(20, bob)
-        engine.process(HostAccepted)
+        engine.process(HostAccepted())
         assertEquals(GamePhase.ShowingAnswer, engine.phase)
         assertEquals(listOf(Buzz(alice.id, 10), Buzz(bob.id, 20)), engine.state.buzzes)
 

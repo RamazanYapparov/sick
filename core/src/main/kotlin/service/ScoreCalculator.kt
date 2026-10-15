@@ -2,14 +2,21 @@ package com.sick.service
 
 import com.sick.model.Player
 
-enum class ScoreMultiplier(val factor: Double) {
-    FULL(1.0),
-    HALF(0.5),
-    DOUBLE(2.0),
+/** Scale for a question price. Halving rounds up, so an odd price never loses its last point. */
+enum class ScoreMultiplier {
+    FULL,
+    HALF,
+    DOUBLE;
+
+    fun applyTo(price: Int): Int = when (this) {
+        FULL -> price
+        HALF -> Math.ceilDiv(price, 2)
+        DOUBLE -> price * 2
+    }
 }
 
 fun Player.addScore(questionPrice: Int, multiplier: ScoreMultiplier = ScoreMultiplier.FULL): Player =
-    copy(score = score + (questionPrice * multiplier.factor).toInt())
+    copy(score = score + multiplier.applyTo(questionPrice))
 
 fun Player.subtractScore(questionPrice: Int, multiplier: ScoreMultiplier = ScoreMultiplier.FULL): Player =
-    copy(score = score - (questionPrice * multiplier.factor).toInt())
+    copy(score = score - multiplier.applyTo(questionPrice))

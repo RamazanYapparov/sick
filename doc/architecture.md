@@ -57,7 +57,7 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | `state/States.kt` | `GamePhase` sealed class (7 phases) |
 | `engine/GameEngine.kt` | Central coordinator — processes events, manages state + phase |
 | `engine/GameTimer.kt` | Coroutine-based countdown, fires TimerTick/TimerExpired |
-| `service/ScoreCalculator.kt` | `Player.addScore()` / `Player.subtractScore()` extensions |
+| `service/ScoreCalculator.kt` | `ScoreMultiplier` (x0.5 rounds up, x1, x2) and `Player.addScore()` / `Player.subtractScore()` extensions |
 | `service/PlayerOps.kt` | `GameState.addPlayer()` / `.removePlayer()` / etc. extensions |
 
 ### Events
@@ -73,7 +73,7 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | `PlayerBuzzed(playerId)` | Player phone / Host Pick | ShowingQuestion, PlayerAnswering (Late Buzz) |
 | `TimerTick` | GameTimer | ShowingQuestion |
 | `TimerExpired` | GameTimer | ShowingQuestion |
-| `HostAccepted` | Host | PlayerAnswering |
+| `HostAccepted(multiplier)` | Host | PlayerAnswering |
 | `HostRejected` | Host | PlayerAnswering |
 | `HostSkippedAnswer` | Host | PlayerAnswering |
 | `NextRound` | Host | RoundEnd |

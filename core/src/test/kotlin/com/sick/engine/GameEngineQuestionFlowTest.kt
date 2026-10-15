@@ -379,4 +379,39 @@ class GameEngineQuestionFlowTest {
         assertNotNull(engine.state.currentQuestion)
         assertEquals(GamePhase.ShowingQuestion, engine.phase)
     }
+
+    @Test
+    fun `HostSkippedAnswer keeps score, bars the player and lets others buzz`() {
+        val (engine, alice, bob) = engineWithTwoPlayers()
+        engine.process(SelectActivePlayer(alice.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
+        engine.process(PlayerBuzzed(alice.id))
+
+        val result = engine.process(HostSkippedAnswer)
+
+        assertTrue(result.isRight())
+        assertEquals(0, engine.state.findPlayer(alice.id)!!.score)
+        assertNull(engine.state.answeringPlayerId)
+        assertNotNull(engine.state.currentQuestion)
+        assertEquals(GamePhase.ShowingQuestion, engine.phase)
+        assertTrue(engine.process(PlayerBuzzed(alice.id)).isLeft())
+        assertTrue(engine.process(PlayerBuzzed(bob.id)).isRight())
+        assertEquals(bob.id, engine.state.answeringPlayerId)
+    }
+
+    @Test
+    fun `HostSkippedAnswer for the last eligible player ends the question without scoring`() {
+        val (engine, player) = engineWithPlayer()
+        engine.process(SelectActivePlayer(player.id))
+        engine.process(QuestionSelected(QUESTION_IDS[0][0]))
+        engine.process(QuestionRevealed)
+        engine.process(PlayerBuzzed(player.id))
+
+        val result = engine.process(HostSkippedAnswer)
+
+        assertTrue(result.isRight())
+        assertEquals(0, engine.state.findPlayer(player.id)!!.score)
+        assertEquals(GamePhase.ShowingAnswer, engine.phase)
+    }
 }

@@ -118,8 +118,8 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     ) {
                         Text("Wrong")
                     }
-                    Button(onClick = controller::skipQuestion) {
-                        Text("Skip")
+                    Button(onClick = controller::skipAnswer) {
+                        Text("Skip Answer")
                     }
                 }
             }

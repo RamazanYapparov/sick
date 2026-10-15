@@ -29,6 +29,8 @@ data object SkipQuestion : GameEvent
 // Host judging
 data object HostAccepted : GameEvent
 data object HostRejected : GameEvent
+/** Host dismisses the answer without scoring: the player is out for this question, others may still buzz. */
+data object HostSkippedAnswer : GameEvent
 data class AdjustPlayerScore(val playerId: UUID, val delta: Int) : GameEvent
 
 // Answer reveal

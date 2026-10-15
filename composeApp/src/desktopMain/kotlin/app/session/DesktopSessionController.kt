@@ -17,6 +17,7 @@ import com.sick.event.AnswerTimerTick
 import com.sick.event.GameEvent
 import com.sick.event.HostAccepted
 import com.sick.event.HostRejected
+import com.sick.event.HostSkippedAnswer
 import com.sick.event.NextRound
 import com.sick.event.PauseTimer
 import com.sick.event.PlayerBuzzed
@@ -157,6 +158,7 @@ class DesktopSessionController(
     fun chooseAnsweringPlayer(playerId: UUID) = dispatch(PlayerBuzzed(playerId))
     fun markAnswerCorrect() = dispatch(HostAccepted)
     fun markAnswerWrong() = dispatch(HostRejected)
+    fun skipAnswer() = dispatch(HostSkippedAnswer)
     fun skipQuestion() = dispatch(SkipQuestion)
     fun skipRound() = dispatch(SkipRound)
     fun showAnswer() = dispatch(AnswerShown)

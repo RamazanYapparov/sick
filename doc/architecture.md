@@ -42,6 +42,7 @@ PlayerAnswering ──[PlayerBuzzed]──→ PlayerAnswering   (Late Buzz: reco
 ShowingQuestion ──[TimerExpired]──→ ChoosingPlayer
 PlayerAnswering ──[HostAccepted]──→ ChoosingQuestion | RoundEnd | GameOver
 PlayerAnswering ──[HostRejected]──→ ShowingQuestion
+PlayerAnswering ──[HostSkippedAnswer]──→ ShowingQuestion   (no score change; player barred for this question)
 RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 ```
 
@@ -74,6 +75,7 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | `TimerExpired` | GameTimer | ShowingQuestion |
 | `HostAccepted` | Host | PlayerAnswering |
 | `HostRejected` | Host | PlayerAnswering |
+| `HostSkippedAnswer` | Host | PlayerAnswering |
 | `NextRound` | Host | RoundEnd |
 
 ### Immutability

@@ -113,6 +113,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
                 PlayerBuzzed::class,
                 HostAccepted::class,
                 HostRejected::class,
+                HostSkippedAnswer::class,
                 SkipQuestion::class,
                 AdjustPlayerScore::class,
                 PauseTimer::class,
@@ -218,7 +219,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             } else {
                 _state.copy(answerTimerRemaining = (_state.answerTimerRemaining - 1).coerceAtLeast(0))
             }
-            is AnswerTimerExpired -> finalizePlayerFailure(event, _state.answeringPlayerId).bind()
+            is AnswerTimerExpired -> finalizePlayerFailure(event, _state.answeringPlayerId, penalize = true).bind()
             is TimerExpired -> if (_state.isTimerPaused) {
                 _state
             } else {
@@ -244,7 +245,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
                     )
             }
 
-            is HostRejected -> finalizePlayerFailure(event, _state.answeringPlayerId).bind()
+            is HostRejected -> finalizePlayerFailure(event, _state.answeringPlayerId, penalize = true).bind()
+            is HostSkippedAnswer -> finalizePlayerFailure(event, _state.answeringPlayerId, penalize = false).bind()
 
             is AnswerShown -> _state.copy(
                 currentQuestion = null,
@@ -284,22 +286,27 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
     }
 
     /**
-     * Shared handler for AnswerTimerExpired and HostRejected: subtract the
-     * question price from the answering player, flag their buzz as failed,
-     * and either reset per-question bookkeeping (if that was the last player
-     * accounted for) or leave the question open for the rest.
+     * Shared handler for AnswerTimerExpired, HostRejected and HostSkippedAnswer:
+     * subtract the question price from the answering player when [penalize] is set,
+     * flag their buzz as failed, and either reset per-question bookkeeping (if that
+     * was the last player accounted for) or leave the question open for the rest.
      */
     private fun finalizePlayerFailure(
         event: GameEvent,
         playerId: UUID?,
+        penalize: Boolean,
     ): Either<GameError, GameState> = either {
         val pid = ensureNotNull(playerId) { GameError.InvalidEvent(event, _phase) }
         val question = ensureNotNull(_state.currentQuestion) { GameError.InvalidEvent(event, _phase) }
         val newFailedIds = _state.failedBuzzPlayerIds + pid
         val allAccounted = _state.copy(failedBuzzPlayerIds = newFailedIds).allPlayersAccountedFor()
-        val afterDeduction = _state.updatePlayerScore(pid) { it.subtractScore(question.price) }
-            .mapLeft { GameError.PlayerError(it) }
-            .bind()
+        val afterDeduction = if (penalize) {
+            _state.updatePlayerScore(pid) { it.subtractScore(question.price) }
+                .mapLeft { GameError.PlayerError(it) }
+                .bind()
+        } else {
+            _state
+        }
         if (allAccounted) {
             afterDeduction.copy(
                 answeringPlayerId = null,
@@ -338,8 +345,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
         is TimerExpired -> if (_state.isTimerPaused) GamePhase.ShowingQuestion else GamePhase.ShowingAnswer
         is SkipQuestion -> GamePhase.ShowingAnswer
         is HostAccepted -> GamePhase.ShowingAnswer
-        is HostRejected -> nextFailurePhase(oldState, oldState.answeringPlayerId)
-        is AnswerTimerExpired -> nextFailurePhase(oldState, oldState.answeringPlayerId)
+        is HostRejected, is HostSkippedAnswer, is AnswerTimerExpired -> nextFailurePhase(oldState, oldState.answeringPlayerId)
         is SkipRound -> GamePhase.RoundEnd
         is AnswerShown -> when {
             _state.isGameOver -> GamePhase.GameOver

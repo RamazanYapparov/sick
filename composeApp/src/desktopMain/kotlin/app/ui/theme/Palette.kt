@@ -1,6 +1,7 @@
 package app.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import app.state.QuestionRole
 
 object Palette {
     val AccentBlue = Color(0xFF235A73)
@@ -75,4 +76,19 @@ object Palette {
     // Player state text colors
     val PlayerFailedText = Color(0xFFCC6666)
     val PlayerAnsweringText = Color(0xFF5CCD8F)
+
+    /** Card or row background for a player's role in the current question; both windows use it. */
+    fun roleBackground(role: QuestionRole?): Color = when (role) {
+        QuestionRole.Answering -> PlayerAnswering
+        QuestionRole.Failed -> PlayerFailed
+        QuestionRole.Skipped -> PlayerSkipped
+        null -> DarkSurface
+    }
+
+    /** Name and score colour for a player's role, or null when the role keeps the default colour. */
+    fun roleText(role: QuestionRole?): Color? = when (role) {
+        QuestionRole.Answering -> PlayerAnsweringText
+        QuestionRole.Failed -> PlayerFailedText
+        QuestionRole.Skipped, null -> null
+    }
 }

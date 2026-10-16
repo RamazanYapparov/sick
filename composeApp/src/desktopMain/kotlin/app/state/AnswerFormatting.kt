@@ -3,7 +3,8 @@ package app.state
 import com.sick.model.Answer
 import java.util.Locale
 
-fun Answer.hostSummary(): List<String> = when (this) {
+/** The answer in words for the host; [questionHasImage] tells whether a Point Answer can be marked. */
+fun Answer.hostSummary(questionHasImage: Boolean): List<String> = when (this) {
     is Answer.Simple -> buildList {
         if (right.isNotEmpty()) add("Right: ${right.joinToString(", ")}")
         if (wrong.isNotEmpty()) add("Wrong: ${wrong.joinToString(", ")}")
@@ -12,9 +13,12 @@ fun Answer.hostSummary(): List<String> = when (this) {
     is Answer.Select -> options.map { option ->
         "${if (option.correct) "[x]" else "[ ]"} ${option.name}: ${option.answer}"
     }
-    is Answer.Point -> listOf(
+    is Answer.Point -> if (questionHasImage) listOf(
         "Point on the question image: ${coordinatesLabel()}",
-        "Marked in red on the question image (shared screen shows it with the answer).",
+        "Marked in red on the question image (the Shared Display shows it with the answer).",
+    ) else listOf(
+        "Point: ${coordinatesLabel()}",
+        "The question has no image, so the point is not marked.",
     )
 }
 

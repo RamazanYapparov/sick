@@ -30,7 +30,7 @@ fun main() {
                 title = "sick - display",
             ) {
                 SharedDisplayApp(
-                    uiState,
+                    uiState.sharedDisplay,
                     controller.audioPlayback,
                     onMediaEnded = controller::mediaEnded,
                 )

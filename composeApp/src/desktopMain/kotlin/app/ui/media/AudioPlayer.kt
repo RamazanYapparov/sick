@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import app.state.AudioPlaybackState
+import app.ui.theme.LocalPanelSizes
 import app.ui.theme.Palette
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.oshai.kotlinlogging.KotlinLogging
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import java.util.concurrent.atomic.AtomicReference
@@ -46,7 +46,6 @@ fun AudioPlayer(
     uri: String,
     playback: AudioPlaybackState,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
     paused: Boolean = false,
     onFinished: () -> Unit = {},
 ) {
@@ -102,7 +101,7 @@ fun AudioPlayer(
     )
 
     // Before the effect above publishes `start`, the clip is about to play.
-    AudioProgressBar(normalizedUri, playback, idleLabel = PLAYING_LABEL, modifier, compact)
+    AudioProgressBar(normalizedUri, playback, idleLabel = PLAYING_LABEL, modifier)
 }
 
 /**
@@ -114,10 +113,9 @@ fun AudioProgress(
     uri: String,
     playback: AudioPlaybackState,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
 ) {
     val normalizedUri = remember(uri) { normalizeMediaUri(uri) }
-    AudioProgressBar(normalizedUri, playback, idleLabel = "\u266B  Waiting for display window...", modifier, compact)
+    AudioProgressBar(normalizedUri, playback, idleLabel = "\u266B  Waiting for the Shared Display...", modifier)
 }
 
 private const val PLAYING_LABEL = "\u266B  Playing audio..."
@@ -129,25 +127,22 @@ private fun AudioProgressBar(
     playback: AudioPlaybackState,
     idleLabel: String,
     modifier: Modifier,
-    compact: Boolean,
 ) {
     val active = playback.uri == normalizedUri
     val errorMessage = if (active) playback.errorMessage else null
     val currentMs = if (active) playback.currentMs else 0.0
     val totalMs = if (active) playback.totalMs else 0.0
 
-    val playerHeight = if (compact) 48.dp else 72.dp
-    val labelSize = if (compact) 14.sp else 20.sp
-    val timeSize = if (compact) 11.sp else 13.sp
+    val sizes = LocalPanelSizes.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(playerHeight)
+            .height(sizes.audioBarHeight)
             .background(Palette.MediaBg),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = if (compact) 10.dp else 16.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = sizes.audioPaddingH),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -159,14 +154,14 @@ private fun AudioProgressBar(
             }
             Text(
                 text = label,
-                fontSize = labelSize,
+                fontSize = sizes.audioLabel,
                 fontWeight = FontWeight.Medium,
                 color = if (errorMessage != null) Color.Red else Palette.AccentGold,
             )
             if (totalMs > 0) {
                 Text(
                     text = "${formatMillis(currentMs)} / ${formatMillis(totalMs)}",
-                    fontSize = timeSize,
+                    fontSize = sizes.audioTime,
                     color = Palette.AccentGold.copy(alpha = 0.7f),
                 )
             }

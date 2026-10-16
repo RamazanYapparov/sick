@@ -169,9 +169,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             // first one makes the Answering Player; in PlayerAnswering it is a Late Buzz.
             is PlayerBuzzed -> {
                 ensureNotNull(_state.findPlayer(event.playerId)) { GameError.PlayerError(PlayerError.NotFound(event.playerId)) }
-                ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
-                ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
-                ensure(_state.buzzes.none { it.playerId == event.playerId }) { GameError.InvalidEvent(event, _phase) }
+                ensure(_state.canBuzz(event.playerId)) { GameError.InvalidEvent(event, _phase) }
                 val openedAt = ensureNotNull(_state.buzzWindowOpenedAtNanos) { GameError.InvalidEvent(event, _phase) }
                 val buzzes = _state.buzzes + Buzz(event.playerId, (clock() - openedAt) / 1_000_000)
                 if (_phase == GamePhase.ShowingQuestion) {

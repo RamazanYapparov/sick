@@ -7,7 +7,8 @@ import app.session.PackScanner
 import app.session.ScannedPackInfo
 import app.state.AudioPlaybackState
 import app.state.DesktopUiState
-import app.state.withEngineSnapshot
+import app.state.HostSession
+import app.state.audienceViews
 import com.sick.engine.EngineTransition
 import com.sick.engine.GameEngine
 import com.sick.event.AdjustPlayerScore
@@ -31,6 +32,7 @@ import com.sick.model.Content
 import com.sick.model.Package
 import com.sick.server.GameServer
 import com.sick.service.ScoreMultiplier
+import com.sick.service.lowestScoreCandidates
 import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -64,15 +66,14 @@ class DesktopSessionController(
 
     private var stateChangeCount = 0L
 
-    var uiState by mutableStateOf(DesktopUiState.initial(port))
+    var uiState by mutableStateOf(withGameViews(previous = null))
         private set
 
-    /** Progress of the audio played on the display window, mirrored on the host. */
+    /** Progress of the audio played on the Shared Display, mirrored on the host. */
     val audioPlayback = AudioPlaybackState()
 
     init {
         server.start()
-        publishState()
     }
 
     fun dispose() {
@@ -95,30 +96,27 @@ class DesktopSessionController(
     }
 
     fun showPackBrowser() {
-        uiState = uiState.copy(showPackBrowser = true)
-        if (uiState.scannedPacks.isEmpty() && !isScanningPacks) {
+        updateSession { copy(showPackBrowser = true) }
+        if (scannedPacks.isEmpty() && !isScanningPacks) {
             refreshLocalPacks()
         }
     }
 
     fun hidePackBrowser() {
-        uiState = uiState.copy(showPackBrowser = false)
+        updateSession { copy(showPackBrowser = false) }
     }
 
     fun refreshLocalPacks() {
         if (isScanningPacks) return
         isScanningPacks = true
-        uiState = uiState.copy(isScanningPacks = true)
+        updateSession { copy(isScanningPacks = true) }
         scope.launch {
             val packs = withContext(Dispatchers.IO) {
                 PackScanner.scan()
             }
             scannedPacks = packs
             isScanningPacks = false
-            uiState = uiState.copy(
-                scannedPacks = packs,
-                isScanningPacks = false,
-            )
+            updateSession { copy(scannedPacks = packs, isScanningPacks = false) }
         }
     }
 
@@ -157,7 +155,7 @@ class DesktopSessionController(
 
     fun toggleShowCompleted() {
         showCompleted = !showCompleted
-        uiState = uiState.copy(showCompleted = showCompleted)
+        publishState()
     }
 
     /** Single host entry point. */
@@ -179,7 +177,7 @@ class DesktopSessionController(
 
     private fun autoSelectIfSingleCandidate() {
         if (engine.phase == GamePhase.ChoosingPlayer) {
-            val candidates = uiState.lowestScoreCandidates
+            val candidates = engine.state.lowestScoreCandidates()
             if (candidates.size == 1) {
                 selectActivePlayer(candidates.single().id)
             }
@@ -291,30 +289,44 @@ class DesktopSessionController(
         if (!EventQueue.isDispatchThread()) {
             logger.warn { "publishState() called from non-EDT thread: ${Thread.currentThread().name} (count=$stateChangeCount)" }
         }
-        uiState = uiState.withEngineSnapshot(
-            engine = engine,
-            loadedPackPath = loadedPackPath,
-            extractedBasePath = extractedBasePath,
-            serverUrl = "http://${resolveLanIp()}:$port",
-        ).copy(
+        uiState = withGameViews(uiState)
+    }
+
+    /** [previous] with fresh audience views and session fields; the initial state when it is null. */
+    private fun withGameViews(previous: DesktopUiState?): DesktopUiState {
+        val url = "http://${resolveLanIp()}:$port"
+        val (host, sharedDisplay) = audienceViews(
+            state = engine.state,
+            phase = engine.phase,
             playback = playback.view,
+            basePath = extractedBasePath,
+            joinUrl = url,
             showCompleted = showCompleted,
-            showPackBrowser = uiState.showPackBrowser,
+        )
+        val session = (previous?.session ?: HostSession(url)).copy(
+            serverUrl = url,
+            loadedPackPath = loadedPackPath,
             scannedPacks = scannedPacks,
             isScanningPacks = isScanningPacks,
         )
+        return previous?.copy(host = host, sharedDisplay = sharedDisplay, session = session)
+            ?: DesktopUiState(host, sharedDisplay, session)
+    }
+
+    private fun updateSession(change: HostSession.() -> HostSession) {
+        uiState = uiState.copy(session = uiState.session.change())
     }
 
     private fun setError(message: String) {
-        uiState = uiState.copy(errorMessage = message, infoMessage = null)
+        updateSession { copy(errorMessage = message, infoMessage = null) }
     }
 
     private fun setInfo(message: String) {
-        uiState = uiState.copy(infoMessage = message, errorMessage = null)
+        updateSession { copy(infoMessage = message, errorMessage = null) }
     }
 
     private fun clearMessages() {
-        uiState = uiState.copy(errorMessage = null, infoMessage = null)
+        updateSession { copy(errorMessage = null, infoMessage = null) }
     }
 
     private fun createEngine(pack: Package): GameEngine = GameEngine(pack)

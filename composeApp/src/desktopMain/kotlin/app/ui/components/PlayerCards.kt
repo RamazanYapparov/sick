@@ -1,5 +1,7 @@
 package app.ui.components
 
+import app.state.PlayerView
+import app.state.QuestionRole
 import app.state.formatReactionTime
 import app.ui.theme.Palette
 import androidx.compose.foundation.horizontalScroll
@@ -19,60 +21,36 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sick.model.Player
-import java.util.UUID
 
+/** The Shared Display's score row: the card shows the player's role in the question, the name marks the Chooser. */
 @Composable
-internal fun PlayerCards(
-    players: List<Player>,
-    activePlayerId: UUID?,
-    answeringPlayerId: UUID?,
-    skipVotePlayerIds: Set<UUID>,
-    failedBuzzPlayerIds: Set<UUID>,
-    reactionTimes: Map<UUID, Long>,
-    compact: Boolean,
-) {
+internal fun PlayerCards(players: List<PlayerView>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         players.forEach { player ->
-            val isAnswering = player.id == answeringPlayerId
-            val isSkipping = player.id in skipVotePlayerIds
-            val isFailed = player.id in failedBuzzPlayerIds
-            val isChoosing = player.id == activePlayerId
-
-            val cardBg = when {
-                isAnswering -> Palette.PlayerAnswering
-                isFailed -> Palette.PlayerFailed
-                isSkipping -> Palette.PlayerSkipped
-                else -> Palette.DarkSurface
-            }
-            val nameColor = when {
-                isAnswering -> Palette.PlayerAnsweringText
-                isFailed -> Palette.PlayerFailedText
-                isChoosing -> Palette.AccentGold
-                else -> Color.White
-            }
-            val nameFontWeight = if (isChoosing) FontWeight.Bold else FontWeight.Normal
-            val scoreColor = if (isAnswering) Palette.PlayerAnsweringText else Palette.AccentGold
-            val textSize = if (compact) 12.sp else 16.sp
+            val cardBg = Palette.roleBackground(player.role)
+            val nameColor = Palette.roleText(player.role)
+                ?: if (player.isChooser) Palette.AccentGold else Color.White
+            val nameFontWeight = if (player.isChooser) FontWeight.Bold else FontWeight.Normal
+            val scoreColor = if (player.role == QuestionRole.Answering) Palette.PlayerAnsweringText else Palette.AccentGold
 
             Card(
                 backgroundColor = cardBg,
-                shape = RoundedCornerShape(if (compact) 10.dp else 14.dp),
+                shape = RoundedCornerShape(14.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = if (compact) 10.dp else 14.dp, vertical = if (compact) 6.dp else 10.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(player.name, fontSize = textSize, color = nameColor, fontWeight = nameFontWeight)
-                    Text("${player.score}", fontSize = textSize, color = scoreColor, fontWeight = FontWeight.Bold)
-                    reactionTimes[player.id]?.let { millis ->
-                        Text(formatReactionTime(millis), fontSize = if (compact) 10.sp else 13.sp, color = nameColor)
+                    Text(player.name, fontSize = 16.sp, color = nameColor, fontWeight = nameFontWeight)
+                    Text("${player.score}", fontSize = 16.sp, color = scoreColor, fontWeight = FontWeight.Bold)
+                    player.reactionMillis?.let { millis ->
+                        Text(formatReactionTime(millis), fontSize = 13.sp, color = nameColor)
                     }
                 }
             }

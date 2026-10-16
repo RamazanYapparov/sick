@@ -2,16 +2,17 @@ package app.ui.window
 
 import app.session.MediaSlot
 import app.state.AudioPlaybackState
-import app.state.DesktopUiState
+import app.state.Panel
 import app.state.QuestionDisplayItem
+import app.state.ShownItem
+import app.state.TimerView
 import app.state.coordinatesLabel
-import app.state.displayContents
 import app.state.isImage
-import app.state.mediaIndexOf
 import app.ui.media.AudioPlayer
 import app.ui.media.AudioProgress
 import app.ui.media.VideoPlayer
 import app.ui.media.normalizeMediaUri
+import app.ui.theme.LocalPanelSizes
 import app.ui.theme.Palette
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,73 +41,133 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sick.model.Answer
-import com.sick.model.Question
-import java.nio.file.Path
+
+/** Renders [panel] at the window's [LocalPanelSizes]; both windows show their panel through here. */
+@Composable
+internal fun PanelContent(
+    panel: Panel,
+    audioPlayback: AudioPlaybackState,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
+) {
+    when (panel) {
+        Panel.NoPack -> NoPackPanel()
+        is Panel.Lobby -> LobbyPanel(panel)
+        is Panel.Board -> BoardOverview(panel.board)
+        is Panel.Revealing -> RevealingPanel(panel)
+        is Panel.Question -> QuestionPanel(panel, audioPlayback, onMediaEnded)
+        is Panel.Answer -> AnswerPanel(panel, audioPlayback, onMediaEnded)
+        Panel.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No active question", color = Palette.MutedText)
+        }
+    }
+}
 
 /**
- * Renders the brief placeholder shown on both the [SharedDisplayScreen] and
- * the host window during the [com.sick.state.GamePhase.RevealingQuestion]
- * phase. It deliberately shows no media so that video/audio playback on the
- * two windows starts at the same time when the reveal finishes.
+ * Shows only the theme and price while the question is revealed, so that
+ * video/audio playback on the two windows starts at the same time when the
+ * reveal finishes.
  */
 @Composable
-internal fun RevealingQuestionPlaceholder(state: DesktopUiState, compact: Boolean, bodySize: TextUnit) {
-    val question = state.currentQuestion ?: return
+private fun RevealingPanel(panel: Panel.Revealing) {
+    val sizes = LocalPanelSizes.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+        shape = RoundedCornerShape(sizes.corner),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(sizes.padding),
+            verticalArrangement = Arrangement.spacedBy(sizes.gap),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                state.currentThemeName ?: "Question",
-                fontSize = if (compact) 16.sp else 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.AccentGold,
-            )
-            Text("${question.price} points", fontSize = bodySize, color = Color.White)
+            Text(panel.theme, fontSize = sizes.title, fontWeight = FontWeight.Bold, color = Palette.AccentGold)
+            Text("${panel.price} points", fontSize = sizes.body, color = Color.White)
         }
     }
 }
 
 @Composable
-internal fun AnswerPanel(
-    question: Question<*>,
-    basePath: Path?,
-    compact: Boolean,
-    bodySize: TextUnit,
+private fun QuestionPanel(
+    panel: Panel.Question,
     audioPlayback: AudioPlaybackState,
-    media: MediaSlot? = null,
-    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
 ) {
-    val answer = question.answer
+    val sizes = LocalPanelSizes.current
+    Card(
+        modifier = Modifier.fillMaxSize(),
+        backgroundColor = Palette.DarkSurface,
+        shape = RoundedCornerShape(sizes.corner),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(sizes.padding),
+            verticalArrangement = Arrangement.spacedBy(sizes.gap),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(panel.theme, fontSize = sizes.title, fontWeight = FontWeight.Bold, color = Palette.AccentGold)
+                    Text("${panel.price} points", fontSize = sizes.body, color = Color.White)
+                }
+                panel.timer?.let { TimerText(it) }
+            }
+
+            Divider(color = Palette.DividerColor)
+
+            QuestionContent(
+                items = panel.items,
+                selectOptions = panel.options,
+                revealCorrect = panel.revealCorrectOption,
+                fitsText = panel.fitsText,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) { shown, size ->
+                RenderShownItem(shown, size, panel.ownsSound, audioPlayback, onMediaEnded)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerText(timer: TimerView) {
+    val sizes = LocalPanelSizes.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("${timer.seconds}", fontSize = sizes.timer, fontWeight = FontWeight.Bold, color = Palette.TimerColor)
+        if (timer.paused) {
+            Text("Paused", fontSize = sizes.body, fontWeight = FontWeight.Bold, color = Palette.TimerColor)
+        }
+    }
+}
+
+@Composable
+private fun AnswerPanel(
+    panel: Panel.Answer,
+    audioPlayback: AudioPlaybackState,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
+) {
+    val sizes = LocalPanelSizes.current
+    val bodySize = sizes.body
     Card(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+        shape = RoundedCornerShape(sizes.corner),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(sizes.padding),
+            verticalArrangement = Arrangement.spacedBy(sizes.gap),
         ) {
-            Text(
-                "Answer",
-                fontSize = if (compact) 16.sp else 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.AccentGold,
-            )
+            Text("Answer", fontSize = sizes.title, fontWeight = FontWeight.Bold, color = Palette.AccentGold)
             Divider(color = Palette.DividerColor)
-            when (answer) {
+            when (val answer = panel.answer) {
                 is Answer.Simple -> {
                     answer.right.forEach { right ->
                         Text(right, fontSize = bodySize, color = Palette.PlayerAnsweringText, fontWeight = FontWeight.Bold)
@@ -117,49 +179,25 @@ internal fun AnswerPanel(
                             Text(wrong, fontSize = bodySize, color = Palette.ConfirmedText)
                         }
                     }
-                    if (answer.contents.isNotEmpty()) {
+                    if (panel.items.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Divider(color = Palette.DividerColor)
-                        val items = displayContents(answer.contents, basePath)
-                        items.forEach { item ->
-                            RenderQuestionDisplayItem(
-                                item = item,
-                                compact = compact,
-                                bodySize = bodySize,
-                                audioPlayback = audioPlayback,
-                                media = media?.takeIf { it.index == items.mediaIndexOf(item) },
-                                onMediaEnded = onMediaEnded,
-                            )
+                        panel.items.forEach { shown ->
+                            RenderShownItem(shown, bodySize, panel.ownsSound, audioPlayback, onMediaEnded)
                         }
                     }
                 }
-                is Answer.Select -> {
-                    SelectOptionsList(
-                        options = answer.options,
-                        basePath = basePath,
-                        compact = compact,
-                        bodySize = bodySize,
-                        revealCorrect = true,
-                    )
-                }
+                is Answer.Select -> SelectOptionsList(answer.options, bodySize, revealCorrect = true)
                 is Answer.Point -> {
-                    val image = remember(question, basePath) {
-                        question.displayContents(basePath).firstOrNull { it.isImage() }
-                    }
-                    if (image != null) {
-                        RenderQuestionDisplayItem(
-                            item = image,
-                            compact = compact,
-                            bodySize = bodySize,
-                            audioPlayback = audioPlayback,
-                            point = answer,
-                        )
-                    } else {
+                    if (panel.items.isEmpty()) {
                         Text(
                             "Point: ${answer.coordinatesLabel()} (question has no image)",
                             fontSize = bodySize,
                             color = Palette.PlayerAnsweringText,
                         )
+                    }
+                    panel.items.forEach { shown ->
+                        RenderShownItem(shown, bodySize, panel.ownsSound, audioPlayback, onMediaEnded)
                     }
                 }
             }
@@ -167,22 +205,168 @@ internal fun AnswerPanel(
     }
 }
 
+@Composable
+private fun SelectOptionsList(
+    options: List<Answer.Select.Option>,
+    bodySize: TextUnit,
+    revealCorrect: Boolean,
+) {
+    val sizes = LocalPanelSizes.current
+    val effectiveBodySize = if (options.size >= 6) bodySize * 0.9f else bodySize
+    val letterSize = bodySize * 1.1f
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { option ->
+            val highlight = revealCorrect && option.correct
+            val confirmed = revealCorrect && !option.correct
+            val rowBg = if (highlight) Palette.PlayerAnswering else Palette.SelectRowBg
+            val textColor = when {
+                highlight -> Palette.PlayerAnsweringText
+                confirmed -> Palette.ConfirmedText
+                else -> Color.White
+            }
+            val letterBg = if (highlight) Palette.PlayerAnswering else Palette.SelectLetterBg
+            val letterColor = when {
+                highlight -> Palette.PlayerAnsweringText
+                confirmed -> Palette.ConfirmedText
+                else -> Palette.AccentGold
+            }
+            val textFontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(rowBg, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(sizes.optionGap),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(letterBg, RoundedCornerShape(sizes.optionLetterCorner))
+                            .padding(horizontal = sizes.optionLetterPaddingH, vertical = sizes.optionLetterPaddingV),
+                    ) {
+                        Text(option.name, fontSize = letterSize, color = letterColor, fontWeight = FontWeight.Bold)
+                    }
+                    Text(option.answer, fontSize = effectiveBodySize, color = textColor, fontWeight = textFontWeight)
+                }
+            }
+        }
+    }
+}
+
+private const val MIN_QUESTION_FONT_SP = 18
+private const val MAX_QUESTION_FONT_SP = 72
+
+/** Share of the content height all images together may take when text is also shown. */
+private const val IMAGE_SHARE_WITH_TEXT = 0.5f
+
 /**
- * [point] marks a [Answer.Point] on image items; other item types ignore it.
- * A video or audio item shows only while it is the current [media]; its player
- * is keyed on the slot, so a new generation (a replay) starts a fresh one.
+ * Stacks question [items] in pack order, followed by [selectOptions].
+ *
+ * With [fitsText] the text size is the largest one in
+ * [MIN_QUESTION_FONT_SP]..[MAX_QUESTION_FONT_SP] at which every text item and
+ * the options, measured with their real composables, fit beside the media.
+ * Otherwise the text keeps the window's body size. Media items are composed
+ * once and never probed, so players are not duplicated.
  */
 @Composable
-internal fun RenderQuestionDisplayItem(
-    item: QuestionDisplayItem,
-    compact: Boolean,
-    bodySize: TextUnit,
-    audioPlayback: AudioPlaybackState,
-    media: MediaSlot? = null,
-    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
-    point: Answer.Point? = null,
+private fun QuestionContent(
+    items: List<ShownItem>,
+    selectOptions: List<Answer.Select.Option>?,
+    revealCorrect: Boolean,
+    fitsText: Boolean,
+    modifier: Modifier,
+    renderItem: @Composable (ShownItem, TextUnit) -> Unit,
 ) {
-    when (item) {
+    val sizes = LocalPanelSizes.current
+    val fixedBodySize = sizes.body
+    val gap = sizes.gap
+    val hasTextBlock = selectOptions != null || items.any { it.item is QuestionDisplayItem.Text }
+    val imageCount = items.count { it.item.isImage() }
+
+    @Composable
+    fun TextBlock(size: TextUnit) {
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            items.forEach { if (it.item is QuestionDisplayItem.Text) renderItem(it, size) }
+            if (selectOptions != null) {
+                SelectOptionsList(selectOptions, size, revealCorrect)
+            }
+        }
+    }
+
+    SubcomposeLayout(modifier) { constraints ->
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val gapPx = gap.roundToPx()
+        val imageCap = if (imageCount == 0) height
+        else (if (hasTextBlock) (height * IMAGE_SHARE_WITH_TEXT).toInt() else height) / imageCount
+
+        val media = items.withIndex()
+            .filter { it.value.item !is QuestionDisplayItem.Text }
+            .associate { (index, shown) ->
+                val maxHeight = if (shown.item.isImage()) imageCap else height
+                index to subcompose("media" to index) { renderItem(shown, fixedBodySize) }
+                    .map { it.measure(Constraints(maxWidth = width, maxHeight = maxHeight)) }
+            }
+        val mediaHeight = media.values.sumOf { slot -> slot.sumOf { it.height } } + gapPx * media.values.count { it.isNotEmpty() }
+
+        val probes = mutableMapOf<Int, Int>()
+        fun fits(sp: Int): Boolean = probes.getOrPut(sp) {
+            subcompose("probe" to sp) { TextBlock(sp.sp) }
+                .sumOf { it.measure(Constraints(maxWidth = width)).height }
+        } <= height - mediaHeight
+
+        val fontSize = if (!fitsText || !hasTextBlock) {
+            fixedBodySize
+        } else {
+            var lo = MIN_QUESTION_FONT_SP
+            var hi = MAX_QUESTION_FONT_SP
+            while (lo < hi) {
+                val mid = (lo + hi + 1) / 2
+                if (fits(mid)) lo = mid else hi = mid - 1
+            }
+            lo.sp
+        }
+
+        val slots = items.indices.map { index ->
+            media[index] ?: subcompose("text" to index) { renderItem(items[index], fontSize) }
+                .map { it.measure(Constraints(maxWidth = width)) }
+        } + listOfNotNull(selectOptions?.let { options ->
+            subcompose("options") { SelectOptionsList(options, fontSize, revealCorrect) }
+                .map { it.measure(Constraints(maxWidth = width)) }
+        })
+
+        layout(width, height) {
+            var y = 0
+            slots.filter { it.isNotEmpty() }.forEachIndexed { i, slot ->
+                if (i > 0) y += gapPx
+                slot.forEach { placeable ->
+                    placeable.place(0, y)
+                    y += placeable.height
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders one item. An image marks the item's Point Answer if it has one. A
+ * video or audio item shows only while it is the current media; its player is
+ * keyed on the slot, so a new generation (a replay) starts a fresh one.
+ */
+@Composable
+private fun RenderShownItem(
+    shown: ShownItem,
+    bodySize: TextUnit,
+    ownsSound: Boolean,
+    audioPlayback: AudioPlaybackState,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
+) {
+    when (val item = shown.item) {
         is QuestionDisplayItem.Text ->
             Text(
                 item.text,
@@ -198,7 +382,7 @@ internal fun RenderQuestionDisplayItem(
                 }.getOrNull()
             }
             if (bitmap != null)
-                ImageItem(bitmap, point)
+                ImageItem(bitmap, shown.point)
             else
                 Text("Image not found: ${item.absolutePath}", color = Color.Red, fontSize = bodySize)
         }
@@ -209,22 +393,22 @@ internal fun RenderQuestionDisplayItem(
                 }.getOrNull()
             }
             if (bitmap != null)
-                ImageItem(bitmap, point)
+                ImageItem(bitmap, shown.point)
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
-        is QuestionDisplayItem.LocalVideo -> MediaItem(media, onMediaEnded) { paused, onFinished ->
+        is QuestionDisplayItem.LocalVideo -> MediaItem(shown.media, onMediaEnded) { paused, onFinished ->
             val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-            QuestionVideo(uri, compact, paused, onFinished)
+            QuestionVideo(uri, ownsSound, paused, onFinished)
         }
-        is QuestionDisplayItem.RemoteVideo -> MediaItem(media, onMediaEnded) { paused, onFinished ->
-            QuestionVideo(item.url.toString(), compact, paused, onFinished)
+        is QuestionDisplayItem.RemoteVideo -> MediaItem(shown.media, onMediaEnded) { paused, onFinished ->
+            QuestionVideo(item.url.toString(), ownsSound, paused, onFinished)
         }
-        is QuestionDisplayItem.LocalAudio -> MediaItem(media, onMediaEnded) { paused, onFinished ->
-            AudioItem(item.absolutePath, compact, audioPlayback, paused, onFinished)
+        is QuestionDisplayItem.LocalAudio -> MediaItem(shown.media, onMediaEnded) { paused, onFinished ->
+            AudioItem(item.absolutePath, ownsSound, audioPlayback, paused, onFinished)
         }
-        is QuestionDisplayItem.RemoteAudio -> MediaItem(media, onMediaEnded) { paused, onFinished ->
-            AudioItem(item.url.toString(), compact, audioPlayback, paused, onFinished)
+        is QuestionDisplayItem.RemoteAudio -> MediaItem(shown.media, onMediaEnded) { paused, onFinished ->
+            AudioItem(item.url.toString(), ownsSound, audioPlayback, paused, onFinished)
         }
     }
 }
@@ -242,17 +426,35 @@ private fun MediaItem(
     }
 }
 
+/** Without [ownsSound] the video plays muted, so its sound comes only from the shared display. */
 @Composable
-private fun QuestionVideo(uri: String, compact: Boolean, paused: Boolean, onFinished: () -> Unit) {
-    // Compact (host) view: video plays but is muted so audio stays unique to
-    // the shared display window.
+private fun QuestionVideo(uri: String, ownsSound: Boolean, paused: Boolean, onFinished: () -> Unit) {
     VideoPlayer(
         uri = uri,
-        modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
+        modifier = Modifier.fillMaxWidth().height(LocalPanelSizes.current.videoHeight),
         paused = paused,
-        muted = compact,
+        muted = !ownsSound,
         onFinished = onFinished,
     )
+}
+
+/**
+ * With [ownsSound] this window runs the single audio player; otherwise it only
+ * mirrors that player's progress, so the clip is never heard twice.
+ */
+@Composable
+private fun AudioItem(
+    uri: String,
+    ownsSound: Boolean,
+    audioPlayback: AudioPlaybackState,
+    paused: Boolean,
+    onFinished: () -> Unit,
+) {
+    if (ownsSound) {
+        AudioPlayer(uri = uri, playback = audioPlayback, paused = paused, onFinished = onFinished)
+    } else {
+        AudioProgress(uri = uri, playback = audioPlayback)
+    }
 }
 
 @Composable
@@ -300,26 +502,4 @@ private fun DrawScope.drawAnswerPoint(point: Answer.Point, bitmapWidth: Float, b
         drawCircle(Palette.AnswerPoint, radius, center, style = Stroke(width = stroke))
     }
     drawCircle(Palette.AnswerPoint, stroke * POINT_DOT_RADIUS_IN_STROKES, center)
-}
-
-@Composable
-private fun AudioItem(
-    uri: String,
-    compact: Boolean,
-    audioPlayback: AudioPlaybackState,
-    paused: Boolean,
-    onFinished: () -> Unit,
-) {
-    if (compact) {
-        // Compact (host) view: progress only. The shared display window owns
-        // the single audio player, so the clip is never heard twice.
-        AudioProgress(uri = uri, playback = audioPlayback, compact = true)
-    } else {
-        AudioPlayer(
-            uri = uri,
-            playback = audioPlayback,
-            paused = paused,
-            onFinished = onFinished,
-        )
-    }
 }

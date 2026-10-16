@@ -1,5 +1,6 @@
 package app.session
 
+import app.state.QuestionDisplayItem
 import com.sick.engine.GameEngine
 import com.sick.event.AdjustPlayerScore
 import com.sick.event.HostAccepted
@@ -53,11 +54,12 @@ class QuestionPlaybackTest {
     }
 
     @Test
-    fun `a missing media file does not hold the timer`() = runTest {
+    fun `a missing media file shows as text and does not hold the timer`() = runTest {
         val emptyPack = Files.createTempDirectory("pack")
         val game = Game(this, question(Content.Media.FileRef(Content.Type.Audio, "gone.mp3")), basePath = emptyPack)
         game.reveal()
 
+        assertEquals(listOf(QuestionDisplayItem.Text("Audio not found: gone.mp3")), game.playback.view.items)
         assertNull(game.playback.view.media)
         advanceSeconds(4)
         assertEquals(29, game.engine.state.timerRemaining)
@@ -161,16 +163,18 @@ class QuestionPlaybackTest {
     }
 
     @Test
-    fun `answer media ends the answer, an answer without media ends after 4 s`() = runTest {
+    fun `answer media replaces the question's content and ends the answer, an answer without media ends after 4 s`() = runTest {
         val withMedia = Game(this, question(answerContents = listOf(video("v"))))
         withMedia.reveal()
         withMedia.engine.process(PlayerBuzzed(withMedia.players[0]))
         withMedia.engine.process(HostAccepted())
+        assertEquals(listOf(QuestionDisplayItem.RemoteVideo(URL("http://media.test/v.mp4"))), withMedia.playback.view.items)
         val slot = assertNotNull(withMedia.playback.view.media)
         advanceSeconds(30)
         assertEquals(GamePhase.ShowingAnswer, withMedia.engine.phase)
         withMedia.playback.onMediaEnded(slot.generation, slot.index)
         assertEquals(GamePhase.ChoosingQuestion, withMedia.engine.phase)
+        assertTrue(withMedia.playback.view.items.isEmpty())
 
         val plain = Game(this, question())
         plain.reveal()

@@ -2,8 +2,8 @@ package app.ui.components
 
 import app.ui.theme.Palette
 import app.session.DesktopSessionController
-import app.state.DesktopUiState
-import app.state.hostSummary
+import app.state.HostControls
+import app.state.TimerView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,65 +19,49 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import com.sick.model.Answer
 import com.sick.service.ScoreMultiplier
-import com.sick.state.GamePhase
 
 @Composable
-internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionController) {
+internal fun PhaseControls(controls: HostControls, controller: DesktopSessionController) {
     SectionCard("Controls") {
-        when (state.phase) {
-            GamePhase.Lobby -> {
+        when (controls) {
+            is HostControls.Lobby -> {
                 Text("Load a pack, add players, then start the game.")
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = controller::startGame, enabled = state.hasPack && state.players.isNotEmpty()) {
+                Button(onClick = controller::startGame, enabled = controls.canStart) {
                     Text("Start Game")
                 }
             }
-            GamePhase.ChoosingPlayer -> {
-                Text("Choose who controls the board — showing lowest score players.")
+            is HostControls.ChoosingPlayer -> {
+                Text("Name the Chooser (players with the lowest score).")
                 Spacer(Modifier.height(8.dp))
-                PlayerChipRow(
-                    players = state.lowestScoreCandidates,
-                    activePlayerId = state.activePlayerId,
-                    onClick = controller::selectActivePlayer,
-                )
+                PlayerChipRow(choices = controls.candidates, onClick = controller::selectActivePlayer)
             }
-            GamePhase.ChoosingQuestion -> {
-                val chooser = state.players.firstOrNull { it.id == state.activePlayerId }?.name ?: "No chooser"
-                Text("Chooser: $chooser")
+            is HostControls.ChoosingQuestion -> {
+                Text("Chooser: ${controls.chooserName ?: "No chooser"}")
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::skipRound) {
                     Text("Skip Round")
                 }
             }
-            GamePhase.RevealingQuestion -> {
+            HostControls.Revealing -> {
                 Text("Revealing question…")
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::skipQuestion) {
                     Text("Skip")
                 }
             }
-            GamePhase.ShowingQuestion -> {
-                val timerLabel = if (state.isTimerPaused) "Timer: ${state.timerRemaining}s (paused)" else "Timer: ${state.timerRemaining}s"
-                Text("Question is live. $timerLabel")
+            is HostControls.Question -> {
+                Text("Question is live. ${timerLabel(controls.timer)}")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (state.isTimerPaused) {
-                        Button(onClick = controller::resumeTimer) {
-                            Text("Resume")
-                        }
-                    } else {
-                        Button(onClick = controller::pauseTimer) {
-                            Text("Pause")
-                        }
-                    }
-                    if (state.playback.canSkipMedia) {
+                    PauseButton(controls.timer, controller)
+                    if (controls.canSkipMedia) {
                         Button(onClick = controller::skipMedia) {
                             Text("Skip Media")
                         }
                     }
-                    if (state.playback.canReplayMedia) {
+                    if (controls.canReplayMedia) {
                         Button(onClick = controller::replayMedia) {
                             Text("Replay Media")
                         }
@@ -90,26 +74,16 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                 Text("Choose answering player manually or wait for a phone buzz.")
                 Spacer(Modifier.height(8.dp))
                 PlayerChipRow(
-                    players = state.players.filter { it.id != state.answeringPlayerId },
-                    activePlayerId = state.answeringPlayerId,
+                    choices = controls.picks,
                     onClick = controller::chooseAnsweringPlayer,
-                    enabled = !state.isTimerPaused,
+                    enabled = controls.canPick,
                 )
             }
-            GamePhase.PlayerAnswering -> {
-                val answeringName = state.players.firstOrNull { it.id == state.answeringPlayerId }?.name ?: "Unknown"
-                Text("Answering player: $answeringName")
+            is HostControls.Answering -> {
+                Text("Answering player: ${controls.playerName}. ${timerLabel(controls.timer)}")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (state.isTimerPaused) {
-                        Button(onClick = controller::resumeTimer) {
-                            Text("Resume")
-                        }
-                    } else {
-                        Button(onClick = controller::pauseTimer) {
-                            Text("Pause")
-                        }
-                    }
+                    PauseButton(controls.timer, controller)
                     Spacer(Modifier.width(8.dp))
                     AcceptButtonGroup(onAccept = controller::markAnswerCorrect)
                     Button(
@@ -124,27 +98,43 @@ internal fun PhaseControls(state: DesktopUiState, controller: DesktopSessionCont
                     }
                 }
             }
-            GamePhase.ShowingAnswer -> {
+            HostControls.ShowingAnswer -> {
                 Text("Answer revealed.")
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::showAnswer) {
                     Text("Continue")
                 }
             }
-            GamePhase.RoundEnd -> {
+            HostControls.RoundEnd -> {
                 Text("Round complete.")
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::nextRound) {
                     Text("Next Round")
                 }
             }
-            GamePhase.GameOver -> {
+            HostControls.GameOver -> {
                 Text("Game over.")
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = controller::resetGame) {
                     Text("New Game")
                 }
             }
+        }
+    }
+}
+
+private fun timerLabel(timer: TimerView) =
+    if (timer.paused) "Timer: ${timer.seconds}s (paused)" else "Timer: ${timer.seconds}s"
+
+@Composable
+private fun PauseButton(timer: TimerView, controller: DesktopSessionController) {
+    if (timer.paused) {
+        Button(onClick = controller::resumeTimer) {
+            Text("Resume")
+        }
+    } else {
+        Button(onClick = controller::pauseTimer) {
+            Text("Pause")
         }
     }
 }
@@ -174,13 +164,14 @@ private fun AcceptButtonGroup(onAccept: (ScoreMultiplier) -> Unit) {
     }
 }
 
+/** The answer in words, or a placeholder when [summary] is null because no question is in play. */
 @Composable
-internal fun HostAnswerCard(answer: Answer?) {
+internal fun HostAnswerCard(summary: List<String>?) {
     SectionCard("Host Answer") {
-        if (answer == null) {
+        if (summary == null) {
             Text("No active question.")
         } else {
-            answer.hostSummary().forEach { line ->
+            summary.forEach { line ->
                 Text(line)
             }
         }

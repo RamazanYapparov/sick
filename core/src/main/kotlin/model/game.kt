@@ -48,3 +48,14 @@ fun GameState.allPlayersAccountedFor(): Boolean {
     val allIds = players.map { it.id }.toSet()
     return (skipVotePlayerIds + failedBuzzPlayerIds).containsAll(allIds)
 }
+
+/**
+ * True if [playerId] may Buzz (or be a Host Pick) in the current Buzz Window: the
+ * window is open and the player has not failed, skipped or already buzzed in it.
+ * Phase and pause are checked by the engine.
+ */
+fun GameState.canBuzz(playerId: UUID): Boolean =
+    buzzWindowOpenedAtNanos != null &&
+        playerId !in failedBuzzPlayerIds &&
+        playerId !in skipVotePlayerIds &&
+        buzzes.none { it.playerId == playerId }

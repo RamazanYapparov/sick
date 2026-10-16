@@ -1,10 +1,13 @@
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import app.session.DesktopSessionController
 import app.state.AudioPlaybackState
-import app.state.DesktopUiState
+import app.state.SharedDisplayView
 import app.ui.window.HostWindowContent
 import app.ui.window.SharedDisplayScreen
+import app.ui.theme.LocalPanelSizes
+import app.ui.theme.PanelSizes
 import app.ui.theme.Palette
 
 @Composable
@@ -19,13 +22,14 @@ fun HostApp(controller: DesktopSessionController) {
             onBackground = Palette.ThemeOnBackground,
         )
     ) {
-        HostWindowContent(controller, controller.uiState)
+        val state = controller.uiState
+        HostWindowContent(controller, state.host, state.session)
     }
 }
 
 @Composable
 fun SharedDisplayApp(
-    state: DesktopUiState,
+    view: SharedDisplayView,
     audioPlayback: AudioPlaybackState,
     onMediaEnded: (generation: Int, index: Int) -> Unit,
 ) {
@@ -39,11 +43,12 @@ fun SharedDisplayApp(
             onBackground = Palette.ThemeOnBackground,
         )
     ) {
-        SharedDisplayScreen(
-            state = state,
-            compact = false,
-            audioPlayback = audioPlayback,
-            onMediaEnded = onMediaEnded,
-        )
+        CompositionLocalProvider(LocalPanelSizes provides PanelSizes.SharedDisplay) {
+            SharedDisplayScreen(
+                view = view,
+                audioPlayback = audioPlayback,
+                onMediaEnded = onMediaEnded,
+            )
+        }
     }
 }

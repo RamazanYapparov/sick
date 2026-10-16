@@ -1,8 +1,14 @@
 # SICK
 
-Desktop host for SIQ quiz games: the host runs the game, players buzz in from their phones, and a shared screen shows the board and scores to the room.
+Desktop host for SIQ quiz games: the host runs the game, players buzz in from their phones, and the Shared Display shows the board and scores to the room.
 
 ## Language
+
+### Room
+
+**Shared Display**:
+The window on the screen the whole room sees: the board, the question with its media, the timer and the scores. It shows an answer only once the answer is shown, and it is the only window that plays sound.
+_Avoid_: Display, shared screen, projector
 
 ### Buzzing
 
@@ -32,8 +38,12 @@ _Avoid_: Manual buzz
 
 ### Questions
 
+**Chooser**:
+The player who picks the next question on the board. At the start of each round the host names the Chooser from the players with the lowest score; afterwards the role passes to the player whose answer the host accepts. The Chooser keeps the role while the question plays and may buzz like anyone else.
+_Avoid_: Active player, board controller
+
 **Point Answer**:
-An answer that is a spot on the question image (SIQ `answerType="point"`), with an accepted radius (`answerDeviation`). The host sees the spot marked on the image while the question plays; the shared display marks it only when the answer is shown. Players answer aloud and the host judges.
+An answer that is a spot on the question image (SIQ `answerType="point"`), with an accepted radius (`answerDeviation`). The host sees the spot marked on the image while the question plays; the Shared Display marks it only when the answer is shown. Players answer aloud and the host judges.
 _Avoid_: Coordinates answer, map answer
 
 **Media Replay**:
@@ -47,5 +57,5 @@ _Avoid_: Media pending, waiting for media
 ### Judging
 
 **Score Multiplier**:
-The scale (x0.5, x1 or x2) the host applies to the question price when accepting an answer. x0.5 rounds up, so an odd price never drops its last point. Only the host's controls show the multiplier; the shared display and phones see just the resulting score. A wrong answer always costs the full price.
+The scale (x0.5, x1 or x2) the host applies to the question price when accepting an answer. x0.5 rounds up, so an odd price never drops its last point. Only the host's controls show the multiplier; the Shared Display and phones see just the resulting score. A wrong answer always costs the full price.
 _Avoid_: Bonus, coefficient

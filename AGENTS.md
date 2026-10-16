@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Kotlin desktop host for SIQ quiz packs (SIGame format). The host runs a Compose desktop app with a host window and a shared display. Players join and buzz from phones through an embedded HTTP server.
+Kotlin desktop host for SIQ quiz packs (SIGame format). The host runs a Compose desktop app with a host window and the Shared Display. Players join and buzz from phones through an embedded HTTP server.
 
-Domain terms (Buzz, Buzz Window, Reaction Time, Late Buzz, Host Pick, …) are defined in `CONTEXT.md`. Use them in code and discussion. Decisions with non-obvious reasons live in `docs/adr/`. Read them before changing the behaviour they cover.
+Domain terms (Shared Display, Buzz, Buzz Window, Reaction Time, Late Buzz, Host Pick, …) are defined in `CONTEXT.md`. Use them in code and discussion. Decisions with non-obvious reasons live in `docs/adr/`. Read them before changing the behaviour they cover.
 
 ## Build & test
 
@@ -24,7 +24,7 @@ Domain terms (Buzz, Buzz Window, Reaction Time, Late Buzz, Host Pick, …) are d
 - **`siq`**: unzips a pack (`SiqExtractor`, zip-slip guarded), parses it, and maps XML to domain models (`mapper/`).
 - **`core`**: domain model (`model/`), events (`event/Events.kt`), phases (`state/States.kt`, a sealed `GamePhase`), and `engine/GameEngine.kt`.
 - **`server`**: Ktor CIO server. It serves the phone page (`PageRoute`, inline HTML/JS) and routes `/join`, `/buzz`, `/skip` straight into `GameEngine.process`.
-- **`composeApp`**: `DesktopSessionController` owns the engine, server, and the session's `QuestionPlayback`, and replaces all three when a pack is loaded or the game reset. `QuestionPlayback` owns question timing: the question and answer timers, the reveal and answer delays, and the media queue (Media Hold, Media Replay, pause on Buzz). It publishes a `PlaybackView`; players report the end of their media with the slot's generation and index. `DesktopUiState` is the immutable snapshot that every window renders.
+- **`composeApp`**: `DesktopSessionController` owns the engine, server, and the session's `QuestionPlayback`, and replaces all three when a pack is loaded or the game reset. `QuestionPlayback` owns question timing: the question and answer timers, the reveal and answer delays, and the media queue (Media Hold, Media Replay, pause on Buzz). It publishes a `PlaybackView`: the content on screen, resolved against the pack folder once per queue (a missing media file becomes a text item), and the current media slot. Players report the end of their media with the slot's generation and index. `DesktopUiState` is the immutable snapshot the windows render: `HostView` and `HostSession` for the host window, `SharedDisplayView` for the Shared Display. The two views are built by `audienceViews` (`state/AudienceViews.kt`) from the engine state and the `PlaybackView`, without touching the disk. Rules about what each audience sees (which panel, timer, player role and Chooser, when the answer is marked, which controls and Host Pick candidates) live there, not in Composables. Both windows render their `Panel` through `PanelContent`; sizes come from `LocalPanelSizes` (`PanelSizes.Host` / `PanelSizes.SharedDisplay`).
 
 ## Engine rules
 
@@ -35,4 +35,4 @@ Domain terms (Buzz, Buzz Window, Reaction Time, Late Buzz, Host Pick, …) are d
 
 ## Tests
 
-Engine behaviour is tested through `GameEngine.process` sequences (`core/src/test/.../engine/`, fixtures in `test/Fixtures.kt`). Question timing and the media queue are tested through `QuestionPlayback` with a real engine and timers on `kotlinx-coroutines-test` virtual time (`composeApp/src/desktopTest/.../session/`). Routes are tested with `ktor-server-test-host`.
+Engine behaviour is tested through `GameEngine.process` sequences (`core/src/test/.../engine/`, fixtures in `test/Fixtures.kt`). Question timing and the media queue are tested through `QuestionPlayback` with a real engine and timers on `kotlinx-coroutines-test` virtual time (`composeApp/src/desktopTest/.../session/`). What each audience sees is tested through `audienceViews` on a real engine and a real `QuestionPlayback` whose timers never run (`composeApp/src/desktopTest/.../state/AudienceViewsTest.kt`); no Compose needed. Routes are tested with `ktor-server-test-host`.

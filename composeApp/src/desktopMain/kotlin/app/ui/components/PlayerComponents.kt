@@ -2,6 +2,8 @@
 
 package app.ui.components
 
+import app.state.PlayerChoice
+import app.state.PlayerView
 import app.state.formatReactionTime
 import app.ui.theme.Palette
 import androidx.compose.foundation.layout.Arrangement
@@ -32,13 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.sick.model.Player
 import java.util.UUID
 
 @Composable
 internal fun PlayerChipRow(
-    players: List<Player>,
-    activePlayerId: UUID?,
+    choices: List<PlayerChoice>,
     onClick: (UUID) -> Unit,
     enabled: Boolean = true,
 ) {
@@ -46,29 +46,28 @@ internal fun PlayerChipRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        players.forEach { player ->
+        choices.forEach { choice ->
             Button(
-                onClick = { onClick(player.id) },
+                onClick = { onClick(choice.id) },
                 enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (player.id == activePlayerId) Palette.AccentYellow else Palette.AccentBlue,
-                    contentColor = if (player.id == activePlayerId) Palette.ActivePlayerText else Color.White,
+                    backgroundColor = if (choice.highlighted) Palette.AccentYellow else Palette.AccentBlue,
+                    contentColor = if (choice.highlighted) Palette.ActivePlayerText else Color.White,
                 ),
             ) {
-                Text(player.name)
+                Text(choice.name)
             }
         }
     }
 }
 
+/** The host's row for one player: the background shows the player's role in the question, the title marks the Chooser. */
 @Composable
 internal fun PlayerEditorRow(
-    player: Player,
+    player: PlayerView,
     scoreDelta: String,
     onScoreChange: (String) -> Unit,
     onAdjustScore: (Int) -> Unit,
-    backgroundColor: Color = Palette.DarkSurface,
-    reactionMillis: Long? = null,
     canRemove: Boolean,
     onRemove: () -> Unit,
 ) {
@@ -87,7 +86,7 @@ internal fun PlayerEditorRow(
             },
         )
     }
-    Card(backgroundColor = backgroundColor, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
+    Card(backgroundColor = Palette.roleBackground(player.role), shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!expanded) {
                 Row(
@@ -95,7 +94,7 @@ internal fun PlayerEditorRow(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PlayerTitle(player, reactionMillis)
+                    PlayerTitle(player)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { expanded = true }) {
                             Text("Edit")
@@ -106,7 +105,7 @@ internal fun PlayerEditorRow(
                     }
                 }
             } else {
-                PlayerTitle(player, reactionMillis)
+                PlayerTitle(player)
                 val buttonEnabled = scoreDelta.isNotBlank() && scoreDelta != "0"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -146,9 +145,11 @@ internal fun PlayerEditorRow(
 }
 
 @Composable
-private fun PlayerTitle(player: Player, reactionMillis: Long?) {
+private fun PlayerTitle(player: PlayerView) {
+    val textColor = Palette.roleText(player.role) ?: Color.Unspecified
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold)
-        reactionMillis?.let { Text(formatReactionTime(it), color = Palette.SecondaryText) }
+        Text("${player.name}  ${player.score}", fontWeight = FontWeight.Bold, color = textColor)
+        if (player.isChooser) Text("Chooser", color = Palette.AccentGold, fontWeight = FontWeight.Bold)
+        player.reactionMillis?.let { Text(formatReactionTime(it), color = Palette.SecondaryText) }
     }
 }

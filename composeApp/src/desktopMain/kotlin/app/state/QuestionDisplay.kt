@@ -55,7 +55,10 @@ fun displayContents(contents: List<Content>, basePath: Path?): List<QuestionDisp
         }
     }
 
-fun Question<*>.displayContents(basePath: Path?) = displayContents(contents, basePath)
+/** The question's first image, on which a Point Answer is marked; resolving an image never touches the disk. */
+fun Question<*>.firstImage(basePath: Path?): QuestionDisplayItem? =
+    contents.firstOrNull { it is Content.Media && it.type == Content.Type.Image }
+        ?.let { displayContents(listOf(it), basePath).single() }
 
 fun QuestionDisplayItem.isImage(): Boolean =
     this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage
@@ -66,7 +69,3 @@ fun QuestionDisplayItem.isPlayable(): Boolean = when (this) {
     is QuestionDisplayItem.LocalAudio, is QuestionDisplayItem.RemoteAudio -> true
     is QuestionDisplayItem.Text, is QuestionDisplayItem.LocalImage, is QuestionDisplayItem.RemoteImage -> false
 }
-
-/** Position of [item] (by identity) among the playable items, in play order; -1 if it is not playable. */
-fun List<QuestionDisplayItem>.mediaIndexOf(item: QuestionDisplayItem): Int =
-    filter { it.isPlayable() }.indexOfFirst { it === item }

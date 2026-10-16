@@ -1,5 +1,6 @@
 package app.session
 
+import app.state.QuestionDisplayItem
 import app.state.displayContents
 import app.state.isPlayable
 import com.sick.engine.EngineTransition
@@ -27,9 +28,15 @@ import java.nio.file.Path
 
 private val logger = KotlinLogging.logger {}
 
-/** What the windows render of the question's or answer's media. */
+/** What the windows render of the question's or answer's content and media. */
 data class PlaybackView(
-    /** The one media shown right now, or null when none is. */
+    /**
+     * The content on screen, resolved once when its queue starts: the question's
+     * in ShowingQuestion and PlayerAnswering, the answer's in ShowingAnswer,
+     * otherwise empty. A media file missing on disk is a Text item.
+     */
+    val items: List<QuestionDisplayItem> = emptyList(),
+    /** The one media shown right now, or null when none is; its index counts the playable [items]. */
     val media: MediaSlot? = null,
     val canSkipMedia: Boolean = false,
     val canReplayMedia: Boolean = false,
@@ -57,7 +64,7 @@ data class MediaSlot(
 class QuestionPlayback(
     private val engine: GameEngine,
     private val scope: CoroutineScope,
-    /** Folder the pack was extracted to; resolves media files the same way the windows do. */
+    /** Folder the pack was extracted to; media files are resolved against it. */
     private val basePath: Path?,
 ) {
     private companion object {
@@ -84,6 +91,7 @@ class QuestionPlayback(
 
     private var phase: GamePhase = engine.phase
     private var state: GameState = engine.state
+    private var items: List<QuestionDisplayItem> = emptyList()
     private var queueSize = 0
     private var track: Track? = null
     private var generation = 0
@@ -95,6 +103,7 @@ class QuestionPlayback(
             val current = track
             val paused = phase == GamePhase.PlayerAnswering || state.isTimerPaused
             return PlaybackView(
+                items = items,
                 media = current?.let { MediaSlot(it.index, generation, paused = paused && !it.ended) },
                 canSkipMedia = phase == GamePhase.ShowingQuestion && current?.ended == false,
                 canReplayMedia = phase == GamePhase.ShowingQuestion && !state.isTimerPaused && !mediaHold && queueSize > 0,
@@ -198,11 +207,13 @@ class QuestionPlayback(
 
     private fun startQueue(contents: List<Content>) {
         generation++
-        queueSize = displayContents(contents, basePath).count { it.isPlayable() }
+        items = displayContents(contents, basePath)
+        queueSize = items.count { it.isPlayable() }
         track = if (queueSize > 0) Track(0, ended = false) else null
     }
 
     private fun clearMedia() {
+        items = emptyList()
         queueSize = 0
         track = null
         mediaHold = false

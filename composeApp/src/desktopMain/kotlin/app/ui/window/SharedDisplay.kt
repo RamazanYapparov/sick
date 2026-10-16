@@ -1,15 +1,13 @@
 package app.ui.window
 
-import app.ui.components.PlayerCards
-import app.ui.components.QuestionBoard
-import app.ui.components.QrCode
-import app.ui.theme.Palette
 import app.state.AudioPlaybackState
-import app.state.DesktopUiState
-import app.state.QuestionDisplayItem
-import app.state.displayContents
-import app.state.isImage
-import app.state.mediaIndexOf
+import app.state.BoardView
+import app.state.SharedDisplayView
+import app.state.Panel
+import app.ui.components.PlayerCards
+import app.ui.components.QrCode
+import app.ui.components.QuestionBoard
+import app.ui.theme.Palette
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,118 +22,94 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
-import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
-import com.sick.model.Answer
-import com.sick.state.GamePhase
-import java.nio.file.Path
 
 @Composable
 internal fun SharedDisplayScreen(
-    state: DesktopUiState,
-    compact: Boolean,
+    view: SharedDisplayView,
     audioPlayback: AudioPlaybackState,
     onMediaEnded: (generation: Int, index: Int) -> Unit,
 ) {
-    val pad = if (compact) 12.dp else 24.dp
-    val bodySize = if (compact) 12.sp else 22.sp
-    val timerSize = if (compact) 24.sp else 46.sp
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colors.background,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(pad),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp),
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Text(
-                if (state.roundName != null) "Round ${state.currentRoundIndex} / ${state.totalRounds}" else "Lobby",
-                fontSize = bodySize,
-                color = Palette.AccentGold,
-            )
-
+            Text(view.header, fontSize = 22.sp, color = Palette.AccentGold)
             Box(modifier = Modifier.weight(1f)) {
-            when {
-                state.phase == GamePhase.ShowingAnswer && state.currentQuestion != null ->
-                    AnswerPanel(
-                        state.currentQuestion,
-                        state.extractedBasePath,
-                        compact,
-                        bodySize,
-                        audioPlayback = audioPlayback,
-                        media = state.playback.media,
-                        onMediaEnded = onMediaEnded,
-                    )
-                state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
-                    RevealingQuestionPlaceholder(state, compact, bodySize)
-                state.currentQuestion != null ->
-                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onMediaEnded)
-                state.phase == GamePhase.Lobby && state.hasPack ->
-                    LobbyPanel(state, compact)
-                else ->
-                    BoardOverview(state, compact)
+                PanelContent(view.panel, audioPlayback, onMediaEnded)
             }
-            }
-            PlayerCards(state.players, state.activePlayerId, state.answeringPlayerId, state.skipVotePlayerIds, state.failedBuzzPlayerIds, state.reactionTimes, compact)
+            PlayerCards(view.players)
         }
     }
 }
 
 @Composable
-private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
+internal fun NoPackPanel() {
     Card(
         modifier = Modifier.fillMaxSize(),
         backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            Text("Load a pack to begin.", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+    }
+}
+
+@Composable
+internal fun LobbyPanel(panel: Panel.Lobby) {
+    Card(
+        modifier = Modifier.fillMaxSize(),
+        backgroundColor = Palette.DarkSurface,
+        shape = RoundedCornerShape(24.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(if (compact) 16.dp else 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 32.dp),
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1.2f),
-                verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = "Pack Loaded",
-                    fontSize = if (compact) 12.sp else 16.sp,
+                    fontSize = 16.sp,
                     color = Palette.AccentGold,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = state.packName,
-                    fontSize = if (compact) 18.sp else 32.sp,
+                    text = panel.packName,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(if (compact) 4.dp else 12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Connect to Play",
-                    fontSize = if (compact) 14.sp else 22.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
 
                 Text(
                     text = "Scan the QR code or enter the connection URL in your browser to join as a player.",
-                    fontSize = if (compact) 11.sp else 16.sp,
+                    fontSize = 16.sp,
                     color = Palette.InfoText
                 )
 
@@ -146,8 +120,8 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
-                        text = state.serverUrl,
-                        fontSize = if (compact) 12.sp else 18.sp,
+                        text = panel.joinUrl,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Palette.AccentGold
                     )
@@ -166,10 +140,10 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
                     elevation = 8.dp,
                     modifier = Modifier
                         .aspectRatio(1f)
-                        .padding(if (compact) 8.dp else 16.dp)
+                        .padding(16.dp)
                 ) {
                     QrCode(
-                        text = state.serverUrl,
+                        text = panel.joinUrl,
                         modifier = Modifier.fillMaxSize().padding(12.dp),
                         fgColor = Palette.ThemeBackground,
                         bgColor = Color.White
@@ -181,272 +155,16 @@ private fun LobbyPanel(state: DesktopUiState, compact: Boolean) {
 }
 
 @Composable
-private fun BoardOverview(state: DesktopUiState, compact: Boolean) {
+internal fun BoardOverview(board: BoardView) {
     Card(
         modifier = Modifier.fillMaxSize(),
         backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
+        shape = RoundedCornerShape(24.dp),
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(if (compact) 12.dp else 20.dp)) {
-            Text(
-                if (state.boardThemes.isEmpty()) "Load a pack to begin." else "Board",
-                fontSize = if (compact) 16.sp else 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            Text("Board", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
             Spacer(Modifier.height(12.dp))
-            QuestionBoard(
-                themes = state.boardThemes,
-                enabled = false,
-                onQuestionClick = {},
-                showCompleted = state.showCompleted,
-                fillHeight = true,
-            )
-        }
-    }
-}
-
-@Composable
-internal fun SelectOptionsList(
-    options: List<Answer.Select.Option>,
-    basePath: Path?,
-    compact: Boolean,
-    bodySize: TextUnit,
-    revealCorrect: Boolean,
-) {
-    // basePath is reserved for future per-option media; intentionally unused for v1.
-    @Suppress("UNUSED_PARAMETER") val reservedBasePath = basePath
-    val effectiveBodySize = if (options.size >= 6) bodySize * 0.9f else bodySize
-    val letterSize = bodySize * 1.1f
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        options.forEach { option ->
-            val highlight = revealCorrect && option.correct
-            val confirmed = revealCorrect && !option.correct
-            val rowBg = if (highlight) Palette.PlayerAnswering else Palette.SelectRowBg
-            val textColor = when {
-                highlight -> Palette.PlayerAnsweringText
-                confirmed -> Palette.ConfirmedText
-                else -> Color.White
-            }
-            val letterBg = if (highlight) Palette.PlayerAnswering else Palette.SelectLetterBg
-            val letterColor = when {
-                highlight -> Palette.PlayerAnsweringText
-                confirmed -> Palette.ConfirmedText
-                else -> Palette.AccentGold
-            }
-            val textFontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(rowBg, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 12.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(letterBg, RoundedCornerShape(if (compact) 4.dp else 6.dp))
-                            .padding(horizontal = if (compact) 6.dp else 10.dp, vertical = if (compact) 2.dp else 4.dp),
-                    ) {
-                        Text(
-                            option.name,
-                            fontSize = letterSize,
-                            color = letterColor,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Text(
-                        option.answer,
-                        fontSize = effectiveBodySize,
-                        color = textColor,
-                        fontWeight = textFontWeight,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * [revealAnswerPoint] marks a [Answer.Point] on the question image; only the
- * host view sets it, so the room does not see the answer before it is shown.
- */
-@Composable
-internal fun CurrentQuestionPanel(
-    state: DesktopUiState,
-    compact: Boolean,
-    bodySize: TextUnit,
-    timerSize: TextUnit,
-    audioPlayback: AudioPlaybackState,
-    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
-    revealAnswerPoint: Boolean = false,
-) {
-    val question = state.currentQuestion ?: return
-    val contents = remember(question, state.extractedBasePath) {
-        question.displayContents(state.extractedBasePath)
-    }
-    val answerPoint = (question.answer as? Answer.Point)?.takeIf { revealAnswerPoint }
-    val pointImage = if (answerPoint != null) contents.firstOrNull { it.isImage() } else null
-
-    Card(
-        modifier = Modifier.fillMaxSize(),
-        backgroundColor = Palette.DarkSurface,
-        shape = RoundedCornerShape(if (compact) 16.dp else 24.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(if (compact) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 14.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(
-                        state.currentThemeName ?: "Question",
-                        fontSize = if (compact) 16.sp else 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.AccentGold,
-                    )
-                    Text("${question.price} points", fontSize = bodySize, color = Color.White)
-                }
-                // During PlayerAnswering: answer timer. Other phases: question timer.
-                when (state.phase) {
-                    GamePhase.PlayerAnswering -> Text(
-                        text = "${state.answerTimerRemaining}",
-                        fontSize = timerSize,
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.TimerColor,
-                    )
-                    else -> if (state.timerRemaining > 0) Text(
-                        text = "${state.timerRemaining}",
-                        fontSize = timerSize,
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.TimerColor,
-                    )
-                }
-            }
-
-            Divider(color = Palette.DividerColor)
-
-            QuestionContent(
-                items = contents,
-                selectOptions = (question.answer as? Answer.Select)?.options,
-                basePath = state.extractedBasePath,
-                compact = compact,
-                fixedBodySize = bodySize,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { item, size ->
-                RenderQuestionDisplayItem(
-                    item = item,
-                    compact = compact,
-                    bodySize = size,
-                    audioPlayback = audioPlayback,
-                    media = state.playback.media?.takeIf { it.index == contents.mediaIndexOf(item) },
-                    onMediaEnded = onMediaEnded,
-                    point = answerPoint.takeIf { item === pointImage },
-                )
-            }
-        }
-    }
-}
-
-private const val MIN_QUESTION_FONT_SP = 18
-private const val MAX_QUESTION_FONT_SP = 72
-
-/** Share of the content height all images together may take when text is also shown. */
-private const val IMAGE_SHARE_WITH_TEXT = 0.5f
-
-/**
- * Stacks question [items] in pack order, followed by [selectOptions].
- *
- * On the shared display the text size is the largest one in
- * [MIN_QUESTION_FONT_SP]..[MAX_QUESTION_FONT_SP] at which every text item and
- * the options, measured with their real composables, fit beside the media.
- * The compact host preview keeps [fixedBodySize]. Media items are composed
- * once and never probed, so players are not duplicated.
- */
-@Composable
-private fun QuestionContent(
-    items: List<QuestionDisplayItem>,
-    selectOptions: List<Answer.Select.Option>?,
-    basePath: Path?,
-    compact: Boolean,
-    fixedBodySize: TextUnit,
-    modifier: Modifier,
-    renderItem: @Composable (QuestionDisplayItem, TextUnit) -> Unit,
-) {
-    val gap = if (compact) 8.dp else 14.dp
-    val hasTextBlock = selectOptions != null || items.any { it is QuestionDisplayItem.Text }
-    val imageCount = items.count { it.isImage() }
-
-    @Composable
-    fun TextBlock(size: TextUnit) {
-        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            items.forEach { if (it is QuestionDisplayItem.Text) renderItem(it, size) }
-            if (selectOptions != null) {
-                SelectOptionsList(selectOptions, basePath, compact, size, revealCorrect = false)
-            }
-        }
-    }
-
-    SubcomposeLayout(modifier) { constraints ->
-        val width = constraints.maxWidth
-        val height = constraints.maxHeight
-        val gapPx = gap.roundToPx()
-        val imageCap = if (imageCount == 0) height
-        else (if (hasTextBlock) (height * IMAGE_SHARE_WITH_TEXT).toInt() else height) / imageCount
-
-        val media = items.withIndex()
-            .filter { it.value !is QuestionDisplayItem.Text }
-            .associate { (index, item) ->
-                val maxHeight = if (item.isImage()) imageCap else height
-                index to subcompose("media" to index) { renderItem(item, fixedBodySize) }
-                    .map { it.measure(Constraints(maxWidth = width, maxHeight = maxHeight)) }
-            }
-        val mediaHeight = media.values.sumOf { slot -> slot.sumOf { it.height } } + gapPx * media.values.count { it.isNotEmpty() }
-
-        val probes = mutableMapOf<Int, Int>()
-        fun fits(sp: Int): Boolean = probes.getOrPut(sp) {
-            subcompose("probe" to sp) { TextBlock(sp.sp) }
-                .sumOf { it.measure(Constraints(maxWidth = width)).height }
-        } <= height - mediaHeight
-
-        val fontSize = if (compact || !hasTextBlock) {
-            fixedBodySize
-        } else {
-            var lo = MIN_QUESTION_FONT_SP
-            var hi = MAX_QUESTION_FONT_SP
-            while (lo < hi) {
-                val mid = (lo + hi + 1) / 2
-                if (fits(mid)) lo = mid else hi = mid - 1
-            }
-            lo.sp
-        }
-
-        val slots = items.indices.map { index ->
-            media[index] ?: subcompose("text" to index) { renderItem(items[index], fontSize) }
-                .map { it.measure(Constraints(maxWidth = width)) }
-        } + listOfNotNull(selectOptions?.let { options ->
-            subcompose("options") { SelectOptionsList(options, basePath, compact, fontSize, revealCorrect = false) }
-                .map { it.measure(Constraints(maxWidth = width)) }
-        })
-
-        layout(width, height) {
-            var y = 0
-            slots.filter { it.isNotEmpty() }.forEachIndexed { i, slot ->
-                if (i > 0) y += gapPx
-                slot.forEach { placeable ->
-                    placeable.place(0, y)
-                    y += placeable.height
-                }
-            }
+            QuestionBoard(board = board, fillHeight = true)
         }
     }
 }

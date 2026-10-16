@@ -7,10 +7,12 @@ import app.ui.components.SectionCard
 import app.ui.components.PlayerEditorRow
 import app.ui.components.PhaseControls
 import app.ui.components.HostAnswerCard
+import app.ui.theme.LocalPanelSizes
+import app.ui.theme.PanelSizes
 import app.ui.theme.Palette
 import app.session.DesktopSessionController
-import app.state.DesktopUiState
-import com.sick.state.GamePhase
+import app.state.HostSession
+import app.state.HostView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -50,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun HostWindowContent(controller: DesktopSessionController, state: DesktopUiState) {
+internal fun HostWindowContent(controller: DesktopSessionController, view: HostView, session: HostSession) {
     val scoreDrafts = remember { mutableStateMapOf<String, String>() }
 
     Surface(color = MaterialTheme.colors.background) {
@@ -63,47 +66,35 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Question board at the top so it's immediately visible
-                if (state.phase == GamePhase.ChoosingQuestion) {
+                view.board?.let { board ->
                     SectionCard("Question Board") {
                         QuestionBoard(
-                            themes = state.boardThemes,
-                            enabled = true,
+                            board = board,
                             onQuestionClick = controller::selectQuestion,
-                            showCompleted = state.showCompleted,
                             onShowCompletedToggle = controller::toggleShowCompleted,
                         )
                     }
                 }
 
                 // Host answer right below the question board
-                HostAnswerCard(state.currentQuestion?.answer)
+                HostAnswerCard(view.answerSummary)
 
-                PhaseControls(state = state, controller = controller)
+                PhaseControls(controls = view.controls, controller = controller)
 
                 SectionCard("Players") {
-                    if (state.players.isEmpty()) {
+                    if (view.players.isEmpty()) {
                         Text("No players yet. Players join via the buzzer URL.")
                     } else {
-                        // Mirrors GameEngine: between questions only, and a started game keeps one player.
-                        val canRemovePlayer = state.phase == GamePhase.Lobby ||
-                            (state.phase in REMOVABLE_PHASES && state.players.size > 1)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.players.forEach { player -> key(player.id) {
+                            view.players.forEach { player -> key(player.id) {
                                 val scoreKey = player.id.toString()
                                 val scoreValue = scoreDrafts.getOrPut(scoreKey) { "100" }
-                                val playerBg = when {
-                                    player.id in state.failedBuzzPlayerIds -> Palette.PlayerFailed
-                                    player.id in state.skipVotePlayerIds -> Palette.PlayerSkipped
-                                    else -> Palette.DarkSurface
-                                }
                                 PlayerEditorRow(
                                     player = player,
                                     scoreDelta = scoreValue,
                                     onScoreChange = { scoreDrafts[scoreKey] = it },
                                     onAdjustScore = { controller.adjustScore(player.id, it) },
-                                    backgroundColor = playerBg,
-                                    reactionMillis = state.reactionTimes[player.id],
-                                    canRemove = canRemovePlayer,
+                                    canRemove = view.canRemovePlayers,
                                     onRemove = { controller.removePlayer(player.id) },
                                 )
                             } }
@@ -112,9 +103,9 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 }
 
                 SectionCard("Session") {
-                    Text("Pack: ${state.packName}", fontWeight = FontWeight.Bold)
-                    if (state.loadedPackPath != null) {
-                        Text(state.loadedPackPath, fontSize = 12.sp, color = Palette.SecondaryText)
+                    Text("Pack: ${view.packName}", fontWeight = FontWeight.Bold)
+                    if (session.loadedPackPath != null) {
+                        Text(session.loadedPackPath, fontSize = 12.sp, color = Palette.SecondaryText)
                     }
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,16 +121,16 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text("Phase: ${state.phase.name}")
+                    Text("Phase: ${view.phaseName}")
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Buzzer page: ${state.serverUrl}")
+                        Text("Buzzer page: ${session.serverUrl}")
                         val clipboard = LocalClipboardManager.current
-                        IconButton(onClick = { clipboard.setText(AnnotatedString(state.serverUrl)) }) {
+                        IconButton(onClick = { clipboard.setText(AnnotatedString(session.serverUrl)) }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = "Copy URL", modifier = Modifier.padding(4.dp))
                         }
                     }
-                    state.infoMessage?.let { Text(it, color = Palette.Success) }
-                    state.errorMessage?.let { Text(it, color = Palette.Error) }
+                    session.infoMessage?.let { Text(it, color = Palette.Success) }
+                    session.errorMessage?.let { Text(it, color = Palette.Error) }
                 }
             }
 
@@ -147,52 +138,15 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    if (state.phase == GamePhase.ShowingAnswer) "Answer" else "Current Question",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                Text(view.panelTitle, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(
                     modifier = Modifier.fillMaxSize()
                         .border(1.dp, Palette.BorderColor, RoundedCornerShape(20.dp))
                         .background(Palette.PanelBackground, RoundedCornerShape(20.dp))
                         .padding(12.dp),
                 ) {
-                    if (state.currentQuestion != null) {
-                        if (state.phase == GamePhase.ShowingAnswer) {
-                            AnswerPanel(
-                                question = state.currentQuestion,
-                                basePath = state.extractedBasePath,
-                                compact = true,
-                                bodySize = 12.sp,
-                                audioPlayback = controller.audioPlayback,
-                                media = state.playback.media,
-                                onMediaEnded = controller::mediaEnded,
-                            )
-                        } else if (state.phase == GamePhase.RevealingQuestion) {
-                            // Match the shared display: don't show question content
-                            // (video/audio) until the reveal animation finishes, so
-                            // both windows start media playback in sync.
-                            RevealingQuestionPlaceholder(
-                                state = state,
-                                compact = true,
-                                bodySize = 12.sp,
-                            )
-                        } else {
-                            CurrentQuestionPanel(
-                                state = state,
-                                compact = true,
-                                bodySize = 12.sp,
-                                timerSize = 24.sp,
-                                audioPlayback = controller.audioPlayback,
-                                onMediaEnded = controller::mediaEnded,
-                                revealAnswerPoint = true,
-                            )
-                        }
-                    } else {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No active question", color = Palette.MutedText)
-                        }
+                    CompositionLocalProvider(LocalPanelSizes provides PanelSizes.Host) {
+                        PanelContent(view.panel, controller.audioPlayback, controller::mediaEnded)
                     }
                 }
             }
@@ -200,10 +154,10 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
     }
 
     // Pack browser dialog
-    if (state.showPackBrowser) {
+    if (session.showPackBrowser) {
         PackBrowserDialog(
-            scannedPacks = state.scannedPacks,
-            isScanning = state.isScanningPacks,
+            scannedPacks = session.scannedPacks,
+            isScanning = session.isScanningPacks,
             onDismiss = controller::hidePackBrowser,
             onRefresh = controller::refreshLocalPacks,
             onBrowseFiles = {
@@ -214,10 +168,3 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
         )
     }
 }
-
-private val REMOVABLE_PHASES = setOf(
-    GamePhase.ChoosingPlayer,
-    GamePhase.ChoosingQuestion,
-    GamePhase.RoundEnd,
-    GamePhase.GameOver,
-)

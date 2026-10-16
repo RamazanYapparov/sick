@@ -64,6 +64,7 @@ class SiqExtractor(private val source: String, private val destination: String) 
 
     private companion object {
         const val BUFFER_SIZE = 4096
-        fun String.decode() = URLDecoder.decode(this, "UTF-8")
+        /** SIQuester percent-encodes entry names but writes `+` as is, so `+` must not become a space. */
+        fun String.decode(): String = URLDecoder.decode(replace("+", "%2B"), Charsets.UTF_8)
     }
 }

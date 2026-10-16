@@ -21,6 +21,15 @@ class SiqExtractorSecurityTest {
     }
 
     @Test
+    fun `decodes percent escapes and keeps a literal plus in entry names`() {
+        val source = createZip("Audio/a%20b_vol+7dB.mp3" to "sound")
+
+        val extracted = SiqExtractor(source.toString(), System.getProperty("java.io.tmpdir")).extract()
+
+        assertEquals("sound", extracted.resolve("Audio/a b_vol+7dB.mp3").readText())
+    }
+
+    @Test
     fun `rejects parent traversal entry`() {
         val source = createZip("../outside.txt" to "unsafe")
 

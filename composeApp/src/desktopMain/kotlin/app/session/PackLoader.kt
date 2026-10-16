@@ -1,8 +1,8 @@
 package app.session
 
-import com.sick.com.sick.siq.reader.SiqExtractor
-import com.sick.com.sick.siq.reader.SiqReader
-import com.sick.com.sick.siq.sanitizeForSimpleMode
+import com.sick.siq.reader.SiqExtractor
+import com.sick.siq.reader.SiqReader
+import com.sick.siq.sanitizeForSimpleMode
 import com.sick.model.Package
 import java.nio.file.Path
 

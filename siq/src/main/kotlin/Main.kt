@@ -1,8 +1,8 @@
 package com.sick
 
-import com.sick.com.sick.siq.reader.SiqExtractor
-import com.sick.com.sick.siq.reader.SiqReader
-// import com.sick.com.sick.siq.reader.process
+import com.sick.siq.reader.SiqExtractor
+import com.sick.siq.reader.SiqReader
+// import com.sick.siq.reader.process
 
 fun main() {
     val path = """C:\Users\ramazan\Downloads\Ogromny_serialny.siq"""

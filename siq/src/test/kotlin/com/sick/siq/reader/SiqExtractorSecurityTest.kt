@@ -1,4 +1,4 @@
-package com.sick.com.sick.siq.reader
+package com.sick.siq.reader
 
 import java.nio.file.Files
 import java.util.zip.ZipEntry

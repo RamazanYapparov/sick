@@ -1,4 +1,4 @@
-package com.sick.com.sick.siq.mapper
+package com.sick.siq.mapper
 
 import com.sick.model.*
 import com.sick.siq.xml.model.Item

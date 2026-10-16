@@ -1,4 +1,4 @@
-package com.sick.com.sick.siq
+package com.sick.siq
 
 import com.sick.model.Answer
 import com.sick.model.Package

@@ -1,4 +1,4 @@
-package com.sick.com.sick.siq.reader
+package com.sick.siq.reader
 
 import java.io.BufferedOutputStream
 import java.net.URLDecoder

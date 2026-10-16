@@ -15,6 +15,8 @@ import com.sick.siq.xml.model.Rounds
 import com.sick.siq.xml.model.Scenario
 import com.sick.siq.xml.model.Theme
 import com.sick.siq.xml.model.Themes
+import java.nio.file.Files
+import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -68,7 +70,7 @@ class PackageMapperTest {
             }
         }
 
-        val domain = xml.toDomain()
+        val domain = xml.toDomain(PackFiles(createTempDirectory("pack-")))
 
         assertEquals(emptyList(), domain.tags)
     }
@@ -118,11 +120,14 @@ class PackageMapperTest {
             }
         }
 
-        val domain = xml.toDomain()
+        val folder = createTempDirectory("pack-")
+        val picture = Files.createDirectories(folder.resolve("Images")).resolve("pic.jpg").also { Files.writeString(it, "i") }
+
+        val domain = xml.toDomain(PackFiles(folder))
         val contents = domain.rounds.single().themes.single().questions.single().contents
 
         assertEquals(2, contents.size)
         assertIs<Content.Text>(contents[0])
-        assertIs<Content.Media.FileRef>(contents[1])
+        assertEquals(Content.Media.Source.Local(picture.toAbsolutePath().normalize()), assertIs<Content.Media>(contents[1]).source)
     }
 }

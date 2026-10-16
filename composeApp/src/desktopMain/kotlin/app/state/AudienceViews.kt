@@ -7,7 +7,6 @@ import com.sick.model.Question
 import com.sick.model.canBuzz
 import com.sick.service.lowestScoreCandidates
 import com.sick.state.GamePhase
-import java.nio.file.Path
 import java.util.UUID
 import com.sick.model.Answer as PackAnswer
 
@@ -150,15 +149,14 @@ data class PlayerChoice(val id: UUID, val name: String, val highlighted: Boolean
 
 /**
  * Decides what the host and the Shared Display show for [state] in [phase].
- * The question's and answer's content comes resolved in [playback]; [basePath]
- * (where the pack was extracted) only locates the image a Point Answer is marked on.
- * Nothing here touches the disk, so it is cheap to call on every published state.
+ * The question's and answer's content comes in [playback]; a Point Answer
+ * carries its image. Nothing here touches the disk, so it is cheap to call on
+ * every published state.
  */
 fun audienceViews(
     state: GameState,
     phase: GamePhase,
     playback: PlaybackView,
-    basePath: Path?,
     joinUrl: String,
     showCompleted: Boolean,
 ): AudienceViews {
@@ -167,10 +165,9 @@ fun audienceViews(
     val players = playerViews(state)
     val board = boardView(state, showCompleted)
     val question = state.currentQuestion
-    val pointImage = question?.firstImage(basePath)
 
     fun panelFor(host: Boolean): Panel? = question?.let {
-        questionPanel(state, phase, it, playback, pointImage, host)
+        questionPanel(state, phase, it, playback, host)
     }
 
     val hostPanel = panelFor(host = true) ?: Panel.Empty
@@ -185,7 +182,7 @@ fun audienceViews(
             packName = packName,
             phaseName = phase.name,
             board = board.takeIf { phase == GamePhase.ChoosingQuestion },
-            answerSummary = question?.answer?.hostSummary(questionHasImage = pointImage != null),
+            answerSummary = question?.answer?.hostSummary(),
             controls = hostControls(state, phase, playback, hasPack),
             panelTitle = if (hostPanel is Panel.Answer) "Answer" else "Current Question",
             panel = hostPanel,
@@ -212,7 +209,6 @@ private fun questionPanel(
     phase: GamePhase,
     question: Question<*>,
     playback: PlaybackView,
-    pointImage: QuestionDisplayItem?,
     host: Boolean,
 ): Panel {
     val theme = state.currentRound?.themes
@@ -226,7 +222,7 @@ private fun questionPanel(
             items = when (val answer = question.answer) {
                 is PackAnswer.Simple -> items.shown(playback.media)
                 is PackAnswer.Select -> emptyList()
-                is PackAnswer.Point -> listOfNotNull(pointImage?.let { ShownItem(it, point = answer) })
+                is PackAnswer.Point -> listOf(ShownItem(answer.image.toDisplayItem(), point = answer))
             },
             ownsSound = !host,
         )

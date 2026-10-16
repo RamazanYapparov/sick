@@ -1,9 +1,8 @@
 package app.state
 
 import com.sick.model.Content
-import com.sick.model.Question
+import com.sick.model.Content.Media.Source
 import java.net.URL
-import java.nio.file.Path
 
 sealed interface QuestionDisplayItem {
     data class Text(val text: String) : QuestionDisplayItem
@@ -16,54 +15,32 @@ sealed interface QuestionDisplayItem {
 }
 
 /** Text first, then media; each group keeps pack order. */
-fun displayContents(contents: List<Content>, basePath: Path?): List<QuestionDisplayItem> =
+fun displayContents(contents: List<Content>): List<QuestionDisplayItem> =
     contents
         .sortedBy { it !is Content.Text }
-        .map { content ->
-        when (content) {
-            is Content.Text -> QuestionDisplayItem.Text(content.text)
-            is Content.Media.FileRef -> when (content.type) {
-                Content.Type.Image -> QuestionDisplayItem.LocalImage(
-                    basePath?.resolve("Images")?.resolve(content.ref)?.toString() ?: content.ref
-                )
-                Content.Type.Video -> {
-                    val resolved = basePath?.resolve("Video")?.resolve(content.ref)
-                    if (resolved != null && resolved.toFile().exists()) {
-                        QuestionDisplayItem.LocalVideo(resolved.toFile().absolutePath)
-                    } else if (resolved != null) {
-                        QuestionDisplayItem.Text("Video not found: ${content.ref}")
-                    } else {
-                        QuestionDisplayItem.LocalVideo(content.ref)
-                    }
-                }
-                Content.Type.Audio -> {
-                    val resolved = basePath?.resolve("Audio")?.resolve(content.ref)
-                    if (resolved != null && resolved.toFile().exists()) {
-                        QuestionDisplayItem.LocalAudio(resolved.toFile().absolutePath)
-                    } else if (resolved != null) {
-                        QuestionDisplayItem.Text("Audio not found: ${content.ref}")
-                    } else {
-                        QuestionDisplayItem.LocalAudio(content.ref)
-                    }
-                }
-            }
-            is Content.Media.FileUrl -> when (content.type) {
-                Content.Type.Image -> QuestionDisplayItem.RemoteImage(content.url)
-                Content.Type.Video -> QuestionDisplayItem.RemoteVideo(content.url)
-                Content.Type.Audio -> QuestionDisplayItem.RemoteAudio(content.url)
+        .map { it.toDisplayItem() }
+
+fun Content.toDisplayItem(): QuestionDisplayItem = when (this) {
+    is Content.Text -> QuestionDisplayItem.Text(text)
+    is Content.Media -> when (val source = source) {
+        is Source.Local -> source.path.toString().let { path ->
+            when (type) {
+                Content.Type.Image -> QuestionDisplayItem.LocalImage(path)
+                Content.Type.Video -> QuestionDisplayItem.LocalVideo(path)
+                Content.Type.Audio -> QuestionDisplayItem.LocalAudio(path)
             }
         }
+        is Source.Remote -> when (type) {
+            Content.Type.Image -> QuestionDisplayItem.RemoteImage(source.url)
+            Content.Type.Video -> QuestionDisplayItem.RemoteVideo(source.url)
+            Content.Type.Audio -> QuestionDisplayItem.RemoteAudio(source.url)
+        }
     }
-
-/** The question's first image, on which a Point Answer is marked; resolving an image never touches the disk. */
-fun Question<*>.firstImage(basePath: Path?): QuestionDisplayItem? =
-    contents.firstOrNull { it is Content.Media && it.type == Content.Type.Image }
-        ?.let { displayContents(listOf(it), basePath).single() }
+}
 
 fun QuestionDisplayItem.isImage(): Boolean =
     this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage
 
-/** Audio or video found where the pack says; a missing local file resolves to a Text item instead. */
 fun QuestionDisplayItem.isPlayable(): Boolean = when (this) {
     is QuestionDisplayItem.LocalVideo, is QuestionDisplayItem.RemoteVideo,
     is QuestionDisplayItem.LocalAudio, is QuestionDisplayItem.RemoteAudio -> true

@@ -1,6 +1,7 @@
 package com.sick.model
 
 import java.net.URL
+import java.nio.file.Path
 import java.util.UUID
 
 data class Question<T: Question.Type>(
@@ -41,11 +42,13 @@ sealed interface Content {
 
     data class Text(val text: String) : Content
 
-    sealed interface Media : Content {
-        val type: Type
-
-        data class FileRef(override val type: Type, val ref: String) : Media
-        data class FileUrl(override val type: Type, val url: URL) : Media
+    /** Image, audio or video; a pack only yields media whose file it found. */
+    data class Media(val type: Type, val source: Source) : Content {
+        sealed interface Source {
+            /** A file inside the extracted pack. */
+            data class Local(val path: Path) : Source
+            data class Remote(val url: URL) : Source
+        }
     }
 }
 
@@ -68,12 +71,13 @@ sealed interface Answer {
     }
 
     /**
-     * A spot on the first image of the question. [x] and [y] are fractions
+     * A spot on [image], the first image of the question. [x] and [y] are fractions
      * (0..1) of the image width and height from its top-left corner.
      * [aspectRatio] is the image width / height recorded by the pack editor.
      * [deviation] is the accepted radius as a fraction of the image's shorter side.
      */
     data class Point(
+        val image: Content.Media,
         val x: Double,
         val y: Double,
         val aspectRatio: Double,

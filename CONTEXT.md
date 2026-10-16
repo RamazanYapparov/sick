@@ -51,7 +51,7 @@ The host restarting the question's audio and video from the first one after the 
 _Avoid_: Repeat, replay sound
 
 **Media Hold**:
-The stretch while the question's audio and video play for the first time, one after another in pack order, during which the question timer does not run. A missing or failing media passes the turn to the next one. It ends after the first playback of the last media, or when the host skips it.
+The stretch while the question's audio and video play for the first time, one after another in pack order, during which the question timer does not run. A failing media passes the turn to the next one. It ends after the first playback of the last media, or when the host skips it.
 _Avoid_: Media pending, waiting for media
 
 ### Judging

@@ -33,6 +33,8 @@ import com.sick.model.Package
 import com.sick.server.GameServer
 import com.sick.service.ScoreMultiplier
 import com.sick.service.lowestScoreCandidates
+import com.sick.siq.OpenedPack
+import com.sick.siq.SiqPack
 import com.sick.state.GamePhase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -49,17 +51,15 @@ class DesktopSessionController(
     private val scope: CoroutineScope,
     private val port: Int = 8080,
 ) {
-    private val packLoader = PackLoader()
-
-    private var loadedPack: Package? = null
+    /** The loaded pack; its extracted media live until it is closed. */
+    private var openedPack: OpenedPack? = null
     private var loadedPackPath: String? = null
-    private var extractedBasePath: Path? = null
     private var scannedPacks: List<ScannedPackInfo> = emptyList()
     private var isScanningPacks: Boolean = false
 
     private var engine: GameEngine = createEngine(emptyPack())
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-    private var playback: QuestionPlayback = QuestionPlayback(engine, scope, extractedBasePath)
+    private var playback: QuestionPlayback = QuestionPlayback(engine, scope)
     private var engineListener: (EngineTransition) -> Unit = bindEngine(engine, playback)
 
     private var showCompleted = false
@@ -80,6 +80,7 @@ class DesktopSessionController(
         playback.close()
         engine.removeListener(engineListener)
         server.stop()
+        openedPack?.close()
     }
 
     fun showDisplayWindow() {
@@ -126,9 +127,10 @@ class DesktopSessionController(
     }
 
     fun resetGame() {
-        replaceSession(loadedPack ?: emptyPack())
+        val pack = openedPack?.pack
+        replaceSession(pack ?: emptyPack())
         setInfo(
-            if (loadedPack != null) "Game reset with current pack."
+            if (pack != null) "Game reset with current pack."
             else "Empty game created. Load a pack to start playing."
         )
     }
@@ -201,15 +203,17 @@ class DesktopSessionController(
     }
 
     private fun loadPack(path: Path) {
-        packLoader.load(path)
-            .onSuccess { loaded ->
-                loadedPack = loaded.pack
+        runCatching { SiqPack.open(path) }
+            .onSuccess { opened ->
+                val previous = openedPack
+                openedPack = opened
                 loadedPackPath = path.toString()
-                extractedBasePath = loaded.extractedBasePath
-                replaceSession(loaded.pack)
-                setInfo("Loaded pack: ${loaded.pack.name}")
-                logger.info { "Loaded pack: ${loaded.pack.name} from $path" }
-                logPackContents(loaded.pack)
+                replaceSession(opened.pack)
+                // A media player may still hold one of its files; what is left is deleted at exit.
+                previous?.close()
+                setInfo("Loaded pack: ${opened.pack.name}")
+                logger.info { "Loaded pack: ${opened.pack.name} from $path" }
+                logPackContents(opened.pack)
             }
             .onFailure { error ->
                 error.printStackTrace()
@@ -229,8 +233,10 @@ class DesktopSessionController(
                     val contentSummary = q.contents.joinToString(", ") {
                         when (it) {
                             is Content.Text -> "Text"
-                            is Content.Media.FileRef -> "${it.type}(${it.ref})"
-                            is Content.Media.FileUrl -> "${it.type}(${it.url})"
+                            is Content.Media -> when (val source = it.source) {
+                                is Content.Media.Source.Local -> "${it.type}(${source.path.fileName})"
+                                is Content.Media.Source.Remote -> "${it.type}(${source.url})"
+                            }
                         }
                     }
                     val answerSummary = when (val a = q.answer) {
@@ -255,7 +261,7 @@ class DesktopSessionController(
 
         engine = createEngine(pack)
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-        playback = QuestionPlayback(engine, scope, extractedBasePath)
+        playback = QuestionPlayback(engine, scope)
         engineListener = bindEngine(engine, playback)
         server.start()
         publishState()
@@ -299,7 +305,6 @@ class DesktopSessionController(
             state = engine.state,
             phase = engine.phase,
             playback = playback.view,
-            basePath = extractedBasePath,
             joinUrl = url,
             showCompleted = showCompleted,
         )

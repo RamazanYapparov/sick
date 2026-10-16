@@ -12,21 +12,23 @@ import kotlin.test.assertFailsWith
 class SiqExtractorSecurityTest {
 
     @Test
-    fun `extracts nested entries inside the temporary directory`() {
+    fun `extracts nested entries inside the destination`() {
         val source = createZip("Images/nested/picture.txt" to "safe")
+        val destination = createTempDirectory("siq-")
 
-        val extracted = SiqExtractor(source.toString(), System.getProperty("java.io.tmpdir")).extract()
+        extractSiq(source, destination)
 
-        assertEquals("safe", extracted.resolve("Images/nested/picture.txt").readText())
+        assertEquals("safe", destination.resolve("Images/nested/picture.txt").readText())
     }
 
     @Test
     fun `decodes percent escapes and keeps a literal plus in entry names`() {
         val source = createZip("Audio/a%20b_vol+7dB.mp3" to "sound")
+        val destination = createTempDirectory("siq-")
 
-        val extracted = SiqExtractor(source.toString(), System.getProperty("java.io.tmpdir")).extract()
+        extractSiq(source, destination)
 
-        assertEquals("sound", extracted.resolve("Audio/a b_vol+7dB.mp3").readText())
+        assertEquals("sound", destination.resolve("Audio/a b_vol+7dB.mp3").readText())
     }
 
     @Test
@@ -34,7 +36,7 @@ class SiqExtractorSecurityTest {
         val source = createZip("../outside.txt" to "unsafe")
 
         assertFailsWith<IllegalArgumentException> {
-            SiqExtractor(source.toString(), System.getProperty("java.io.tmpdir")).extract()
+            extractSiq(source, createTempDirectory("siq-"))
         }
     }
 
@@ -43,7 +45,7 @@ class SiqExtractorSecurityTest {
         val source = createZip("%2e%2e%2foutside.txt" to "unsafe")
 
         assertFailsWith<IllegalArgumentException> {
-            SiqExtractor(source.toString(), System.getProperty("java.io.tmpdir")).extract()
+            extractSiq(source, createTempDirectory("siq-"))
         }
     }
 

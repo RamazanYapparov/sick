@@ -26,8 +26,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import java.net.URL
-import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,18 +49,6 @@ class QuestionPlaybackTest {
         game.playback.onMediaEnded(slot.generation, 0)
         advanceSeconds(2)
         assertEquals(28, game.engine.state.timerRemaining)
-    }
-
-    @Test
-    fun `a missing media file shows as text and does not hold the timer`() = runTest {
-        val emptyPack = Files.createTempDirectory("pack")
-        val game = Game(this, question(Content.Media.FileRef(Content.Type.Audio, "gone.mp3")), basePath = emptyPack)
-        game.reveal()
-
-        assertEquals(listOf(QuestionDisplayItem.Text("Audio not found: gone.mp3")), game.playback.view.items)
-        assertNull(game.playback.view.media)
-        advanceSeconds(4)
-        assertEquals(29, game.engine.state.timerRemaining)
     }
 
     @Test
@@ -203,7 +189,7 @@ class QuestionPlaybackTest {
     }
 
     /** Two players in a one-theme pack whose first question is [question]; playback runs on [test]'s virtual time. */
-    private class Game(private val test: TestScope, question: Question<*>, basePath: Path? = null) {
+    private class Game(private val test: TestScope, question: Question<*>) {
         val engine = GameEngine(
             Package(
                 name = "p",
@@ -215,7 +201,7 @@ class QuestionPlaybackTest {
                 ),
             ),
         )
-        val playback = QuestionPlayback(engine, test.backgroundScope, basePath)
+        val playback = QuestionPlayback(engine, test.backgroundScope)
         private val questionId = question.id
 
         init {
@@ -247,6 +233,6 @@ class QuestionPlaybackTest {
         answer = Answer.Simple(right = listOf("a"), wrong = emptyList(), contents = answerContents),
     )
 
-    private fun audio(name: String) = Content.Media.FileUrl(Content.Type.Audio, URL("http://media.test/$name.mp3"))
-    private fun video(name: String) = Content.Media.FileUrl(Content.Type.Video, URL("http://media.test/$name.mp4"))
+    private fun audio(name: String) = Content.Media(Content.Type.Audio, Content.Media.Source.Remote(URL("http://media.test/$name.mp3")))
+    private fun video(name: String) = Content.Media(Content.Type.Video, Content.Media.Source.Remote(URL("http://media.test/$name.mp4")))
 }

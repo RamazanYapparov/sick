@@ -4,7 +4,7 @@ import com.sick.model.Package
 import com.sick.model.Question
 import com.sick.model.RoundType
 
-fun Package.sanitizeForSimpleMode(): Package {
+internal fun Package.sanitizeForSimpleMode(): Package {
     val rounds = rounds
         .filter { it.type == RoundType.Simple }
         .mapNotNull { round ->

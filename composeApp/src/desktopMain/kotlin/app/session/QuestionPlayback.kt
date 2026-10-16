@@ -24,16 +24,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.nio.file.Path
 
 private val logger = KotlinLogging.logger {}
 
 /** What the windows render of the question's or answer's content and media. */
 data class PlaybackView(
     /**
-     * The content on screen, resolved once when its queue starts: the question's
+     * The content on screen, set once when its queue starts: the question's
      * in ShowingQuestion and PlayerAnswering, the answer's in ShowingAnswer,
-     * otherwise empty. A media file missing on disk is a Text item.
+     * otherwise empty.
      */
     val items: List<QuestionDisplayItem> = emptyList(),
     /** The one media shown right now, or null when none is; its index counts the playable [items]. */
@@ -64,8 +63,6 @@ data class MediaSlot(
 class QuestionPlayback(
     private val engine: GameEngine,
     private val scope: CoroutineScope,
-    /** Folder the pack was extracted to; media files are resolved against it. */
-    private val basePath: Path?,
 ) {
     private companion object {
         const val TIMER_OFFSET_SECONDS = 3
@@ -207,7 +204,7 @@ class QuestionPlayback(
 
     private fun startQueue(contents: List<Content>) {
         generation++
-        items = displayContents(contents, basePath)
+        items = displayContents(contents)
         queueSize = items.count { it.isPlayable() }
         track = if (queueSize > 0) Track(0, ended = false) else null
     }

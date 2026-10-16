@@ -6,7 +6,6 @@ import app.state.Panel
 import app.state.QuestionDisplayItem
 import app.state.ShownItem
 import app.state.TimerView
-import app.state.coordinatesLabel
 import app.state.isImage
 import app.ui.media.AudioPlayer
 import app.ui.media.AudioProgress
@@ -188,17 +187,8 @@ private fun AnswerPanel(
                     }
                 }
                 is Answer.Select -> SelectOptionsList(answer.options, bodySize, revealCorrect = true)
-                is Answer.Point -> {
-                    if (panel.items.isEmpty()) {
-                        Text(
-                            "Point: ${answer.coordinatesLabel()} (question has no image)",
-                            fontSize = bodySize,
-                            color = Palette.PlayerAnsweringText,
-                        )
-                    }
-                    panel.items.forEach { shown ->
-                        RenderShownItem(shown, bodySize, panel.ownsSound, audioPlayback, onMediaEnded)
-                    }
+                is Answer.Point -> panel.items.forEach { shown ->
+                    RenderShownItem(shown, bodySize, panel.ownsSound, audioPlayback, onMediaEnded)
                 }
             }
         }

@@ -64,8 +64,9 @@ class AudienceViewsTest {
 
     @Test
     fun `a Point Answer is marked on the first image for the host, and for the room once shown`() {
-        val point = Answer.Point(x = 0.5, y = 0.5, aspectRatio = 1.0, deviation = 0.1)
-        val question = question(Content.Text("Where?"), image("first"), image("second"), answer = point)
+        val first = image("first")
+        val point = Answer.Point(image = first, x = 0.5, y = 0.5, aspectRatio = 1.0, deviation = 0.1)
+        val question = question(Content.Text("Where?"), first, image("second"), answer = point)
         val table = Table(question).start()
         table.go(QuestionSelected(question.id))
         table.go(QuestionRevealed)
@@ -77,18 +78,6 @@ class AudienceViewsTest {
         table.go(SkipQuestion)
         val shown = assertIs<Panel.Answer>(table.views().sharedDisplay.panel)
         assertEquals(listOf(ShownItem(QuestionDisplayItem.RemoteImage(URL("http://media.test/first.png")), point = point)), shown.items)
-    }
-
-    @Test
-    fun `the host is told when a Point Answer has no image to mark`() {
-        val question = question(Content.Text("Where?"), answer = Answer.Point(0.5, 0.5, 1.0, 0.1))
-        val table = Table(question).start()
-        table.go(QuestionSelected(question.id))
-
-        assertEquals(
-            "The question has no image, so the point is not marked.",
-            table.views().host.answerSummary?.last(),
-        )
     }
 
     @Test
@@ -209,7 +198,7 @@ class AudienceViewsTest {
         constructor(vararg themes: Theme) : this(pack(*themes), "Alice")
 
         val engine = GameEngine(pack ?: Package(name = "p", logo = "", tags = emptyList(), author = "", rounds = emptyList()))
-        val playback = QuestionPlayback(engine, TestScope(), basePath = null)
+        val playback = QuestionPlayback(engine, TestScope())
 
         init {
             engine.addListener(playback::onTransition)
@@ -228,7 +217,7 @@ class AudienceViewsTest {
         }
 
         fun views(playback: PlaybackView = this.playback.view, showCompleted: Boolean = false) =
-            audienceViews(engine.state, engine.phase, playback, basePath = null, joinUrl = JOIN_URL, showCompleted = showCompleted)
+            audienceViews(engine.state, engine.phase, playback, joinUrl = JOIN_URL, showCompleted = showCompleted)
     }
 
     private companion object {
@@ -249,7 +238,7 @@ class AudienceViewsTest {
             answer: Answer = Answer.Simple(right = listOf("a"), wrong = emptyList()),
         ) = Question(price = 100, type = Question.Type.Simple, contents = contents.toList(), answer = answer)
 
-        fun image(name: String) = Content.Media.FileUrl(Content.Type.Image, URL("http://media.test/$name.png"))
-        fun audio(name: String) = Content.Media.FileUrl(Content.Type.Audio, URL("http://media.test/$name.mp3"))
+        fun image(name: String) = Content.Media(Content.Type.Image, Content.Media.Source.Remote(URL("http://media.test/$name.png")))
+        fun audio(name: String) = Content.Media(Content.Type.Audio, Content.Media.Source.Remote(URL("http://media.test/$name.mp3")))
     }
 }

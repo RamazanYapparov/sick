@@ -7,6 +7,7 @@ group = "com.sick"
 dependencies {
     implementation(project(":siq:xml"))
     implementation(project(":core"))
+    implementation(libs.kotlin.logging)
     testImplementation(kotlin("test"))
 }
 

@@ -1,6 +1,5 @@
 package app.state
 
-import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.Question
 import java.net.URL
@@ -61,10 +60,13 @@ fun Question<*>.displayContents(basePath: Path?) = displayContents(contents, bas
 fun QuestionDisplayItem.isImage(): Boolean =
     this is QuestionDisplayItem.LocalImage || this is QuestionDisplayItem.RemoteImage
 
-private val PLAYABLE_TYPES = setOf(Content.Type.Video, Content.Type.Audio)
+/** Audio or video found where the pack says; a missing local file resolves to a Text item instead. */
+fun QuestionDisplayItem.isPlayable(): Boolean = when (this) {
+    is QuestionDisplayItem.LocalVideo, is QuestionDisplayItem.RemoteVideo,
+    is QuestionDisplayItem.LocalAudio, is QuestionDisplayItem.RemoteAudio -> true
+    is QuestionDisplayItem.Text, is QuestionDisplayItem.LocalImage, is QuestionDisplayItem.RemoteImage -> false
+}
 
-/** The question shows audio or video. */
-fun Question<*>.hasMedia(): Boolean = contents.any { it is Content.Media && it.type in PLAYABLE_TYPES }
-
-/** The answer shows audio or video. */
-fun Answer.hasMedia(): Boolean = this is Answer.Simple && contents.any { it is Content.Media && it.type in PLAYABLE_TYPES }
+/** Position of [item] (by identity) among the playable items, in play order; -1 if it is not playable. */
+fun List<QuestionDisplayItem>.mediaIndexOf(item: QuestionDisplayItem): Int =
+    filter { it.isPlayable() }.indexOfFirst { it === item }

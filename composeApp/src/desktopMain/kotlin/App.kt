@@ -27,8 +27,7 @@ fun HostApp(controller: DesktopSessionController) {
 fun SharedDisplayApp(
     state: DesktopUiState,
     audioPlayback: AudioPlaybackState,
-    onQuestionMediaFinished: () -> Unit,
-    onAnswerMediaFinished: () -> Unit,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
 ) {
     MaterialTheme(
         colors = MaterialTheme.colors.copy(
@@ -44,8 +43,7 @@ fun SharedDisplayApp(
             state = state,
             compact = false,
             audioPlayback = audioPlayback,
-            onQuestionMediaFinished = onQuestionMediaFinished,
-            onAnswerMediaFinished = onAnswerMediaFinished,
+            onMediaEnded = onMediaEnded,
         )
     }
 }

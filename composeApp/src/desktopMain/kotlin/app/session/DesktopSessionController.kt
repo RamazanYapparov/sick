@@ -8,12 +8,10 @@ import app.session.ScannedPackInfo
 import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.withEngineSnapshot
+import com.sick.engine.EngineTransition
 import com.sick.engine.GameEngine
-import com.sick.engine.GameTimer
 import com.sick.event.AdjustPlayerScore
 import com.sick.event.AnswerShown
-import com.sick.event.AnswerTimerExpired
-import com.sick.event.AnswerTimerTick
 import com.sick.event.GameEvent
 import com.sick.event.HostAccepted
 import com.sick.event.HostRejected
@@ -22,15 +20,12 @@ import com.sick.event.NextRound
 import com.sick.event.PauseTimer
 import com.sick.event.PlayerBuzzed
 import com.sick.event.PlayerLeft
-import com.sick.event.QuestionRevealed
 import com.sick.event.QuestionSelected
 import com.sick.event.ResumeTimer
 import com.sick.event.SelectActivePlayer
 import com.sick.event.SkipQuestion
 import com.sick.event.SkipRound
 import com.sick.event.StartGame
-import com.sick.event.TimerExpired
-import com.sick.event.TimerTick
 import com.sick.model.Answer
 import com.sick.model.Content
 import com.sick.model.Package
@@ -61,15 +56,10 @@ class DesktopSessionController(
     private var isScanningPacks: Boolean = false
 
     private var engine: GameEngine = createEngine(emptyPack())
-    private var timer: GameTimer = createQuestionTimers().first
-    private var answerTimer: GameTimer = createQuestionTimers().second
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-    private var timerOrchestrator: TimerOrchestrator = TimerOrchestrator(timer, answerTimer, engine, scope, ::showAnswer, ::revealQuestion)
+    private var playback: QuestionPlayback = QuestionPlayback(engine, scope, extractedBasePath)
+    private var engineListener: (EngineTransition) -> Unit = bindEngine(engine, playback)
 
-    private var mediaStopSignal = 0
-    private var mediaPaused = false
-    private var mediaReplaySignal = 0
-    private var mediaReplaying = false
     private var showCompleted = false
 
     private var stateChangeCount = 0L
@@ -81,13 +71,13 @@ class DesktopSessionController(
     val audioPlayback = AudioPlaybackState()
 
     init {
-        bindEngine(engine)
         server.start()
         publishState()
     }
 
     fun dispose() {
-        timerOrchestrator.stop()
+        playback.close()
+        engine.removeListener(engineListener)
         server.stop()
     }
 
@@ -162,32 +152,20 @@ class DesktopSessionController(
     fun adjustScore(playerId: UUID, delta: Int) = dispatch(AdjustPlayerScore(playerId, delta))
     fun removePlayer(playerId: UUID) = dispatch(PlayerLeft(playerId))
 
-    fun pauseTimer() = dispatch(PauseTimer, setMediaPaused = true)
-    // Media paused by a buzz stays paused while the player answers; onPhaseChange
-    // resumes it when the phase leaves PlayerAnswering.
-    fun resumeTimer() = dispatch(
-        ResumeTimer,
-        setMediaPaused = if (engine.phase == GamePhase.PlayerAnswering) null else false,
-    )
+    fun pauseTimer() = dispatch(PauseTimer)
+    fun resumeTimer() = dispatch(ResumeTimer)
 
     fun toggleShowCompleted() {
         showCompleted = !showCompleted
         uiState = uiState.copy(showCompleted = showCompleted)
     }
 
-    /**
-     * Single host entry point. Side effects on [mediaPaused] happen BEFORE the
-     * engine call so the UI reflects user intent immediately; if the engine
-     * rejects the event, [mediaPaused] is rolled back to its prior value.
-     */
-    private fun dispatch(event: GameEvent, setMediaPaused: Boolean? = null) {
-        val previousMediaPaused = mediaPaused
-        if (setMediaPaused != null) mediaPaused = setMediaPaused
+    /** Single host entry point. */
+    private fun dispatch(event: GameEvent) {
         logger.debug { "dispatch: ${event::class.simpleName}, previousPhase=${engine.previousPhase}, thread=${Thread.currentThread().name}" }
         engine.process(event).fold(
             ifLeft = { error ->
                 logger.warn { "dispatch: ${event::class.simpleName} rejected: ${error.message}" }
-                mediaPaused = previousMediaPaused
                 setError(error.message)
             },
             ifRight = {
@@ -208,34 +186,19 @@ class DesktopSessionController(
         }
     }
 
-    // vlcj reports the end of playback on its own event thread.
-    fun questionMediaFinished() = onEdt {
-        // A replay runs alongside the question timer, so its end starts nothing.
-        if (mediaReplaying) mediaReplaying = false else timerOrchestrator.onQuestionMediaFinished()
-        publishState()
-    }
-
-    fun answerMediaFinished() = onEdt {
-        timerOrchestrator.onAnswerMediaFinished()
+    /** A media player finished, failed, or could not start; vlcj reports this on its own event thread. */
+    fun mediaEnded(generation: Int, index: Int) = onEdt {
+        playback.onMediaEnded(generation, index)
         publishState()
     }
 
     fun skipMedia() {
-        mediaStopSignal++
-        mediaReplaying = false
-        timerOrchestrator.onQuestionMediaFinished()
+        playback.skipMedia()
         publishState()
     }
 
-    /**
-     * Restarts the question media from the beginning once its first playback is
-     * over. The question timer keeps running; if it expires mid-replay the
-     * question ends and leaving the question panel disposes the players.
-     */
     fun replayMedia() {
-        if (engine.phase != GamePhase.ShowingQuestion || engine.state.isTimerPaused || timerOrchestrator.isMediaPending) return
-        mediaReplaySignal++
-        mediaReplaying = true
+        playback.replayMedia()
         publishState()
     }
 
@@ -287,42 +250,15 @@ class DesktopSessionController(
         logger.info { "=== End Pack ===" }
     }
 
-    private fun createQuestionTimers(): Pair<GameTimer, GameTimer> {
-        val q = GameTimer(
-            onTick = { engine.process(TimerTick) },
-            onExpired = {
-                logger.debug { "question-timer.onExpired: TimerExpired fired by timer callback" }
-                engine.process(TimerExpired)
-            },
-            scope = scope,
-            name = "question-timer",
-        )
-        val a = GameTimer(
-            onTick = { engine.process(AnswerTimerTick) },
-            onExpired = {
-                logger.debug { "answer-timer.onExpired: AnswerTimerExpired fired by timer callback" }
-                engine.process(AnswerTimerExpired)
-            },
-            scope = scope,
-            name = "answer-timer",
-        )
-        return q to a
-    }
-
     private fun replaceSession(pack: Package) {
-        timerOrchestrator.stop()
+        playback.close()
+        engine.removeListener(engineListener)
         server.stop()
 
         engine = createEngine(pack)
-        val (qTimer, aTimer) = createQuestionTimers()
-        timer = qTimer
-        answerTimer = aTimer
         server = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
-        timerOrchestrator = TimerOrchestrator(timer, answerTimer, engine, scope, ::showAnswer, ::revealQuestion)
-        mediaPaused = false
-        mediaStopSignal = 0
-        mediaReplaying = false
-        bindEngine(engine)
+        playback = QuestionPlayback(engine, scope, extractedBasePath)
+        engineListener = bindEngine(engine, playback)
         server.start()
         publishState()
         logger.info { "Session replaced with new pack: ${pack.name}" }
@@ -330,37 +266,24 @@ class DesktopSessionController(
 
     /**
      * Engine listeners run on whichever thread called `engine.process`: the EDT
-     * for host actions and timers, a Ktor worker for phone requests. Controller
-     * fields and Compose state are EDT-only, so the work hops there when needed.
+     * for host actions and timers, a Ktor worker for phone requests. Playback and
+     * Compose state are EDT-only, so the work hops there when needed. A
+     * transition still queued when the session is replaced reaches only its own,
+     * closed playback.
      */
-    private fun bindEngine(target: GameEngine) {
-        target.addListener { _, _, previousPhase, newPhase ->
-            val isMediaActive = timerOrchestrator.isMediaPending
-            onEdt { onPhaseChange(previousPhase, newPhase, isMediaActive) }
+    private fun bindEngine(target: GameEngine, targetPlayback: QuestionPlayback): (EngineTransition) -> Unit {
+        val listener: (EngineTransition) -> Unit = { transition ->
+            onEdt {
+                targetPlayback.onTransition(transition)
+                if (targetPlayback === playback) publishState()
+            }
         }
+        target.addListener(listener)
+        return listener
     }
 
     private fun onEdt(block: () -> Unit) {
         if (EventQueue.isDispatchThread()) block() else EventQueue.invokeLater(block)
-    }
-
-    private fun onPhaseChange(previousPhase: GamePhase, newPhase: GamePhase, isMediaActive: Boolean) {
-        if (newPhase != GamePhase.ShowingQuestion && newPhase != GamePhase.PlayerAnswering) mediaReplaying = false
-        when {
-            previousPhase == GamePhase.ShowingQuestion && newPhase == GamePhase.PlayerAnswering && (isMediaActive || mediaReplaying) ->
-                mediaPaused = true
-            previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingQuestion ->
-                mediaPaused = false
-            previousPhase == GamePhase.PlayerAnswering && newPhase == GamePhase.ShowingAnswer -> {
-                mediaPaused = false
-                mediaStopSignal++
-            }
-            newPhase == GamePhase.ChoosingQuestion -> {
-                mediaStopSignal = 0
-                mediaPaused = false
-            }
-        }
-        publishState()
     }
 
     private fun publishState() {
@@ -374,11 +297,7 @@ class DesktopSessionController(
             extractedBasePath = extractedBasePath,
             serverUrl = "http://${resolveLanIp()}:$port",
         ).copy(
-            mediaActive = timerOrchestrator.isMediaPending,
-            mediaStopSignal = mediaStopSignal,
-            mediaPaused = mediaPaused,
-            mediaReplaySignal = mediaReplaySignal,
-            mediaReplaying = mediaReplaying,
+            playback = playback.view,
             showCompleted = showCompleted,
             showPackBrowser = uiState.showPackBrowser,
             scannedPacks = scannedPacks,
@@ -397,8 +316,6 @@ class DesktopSessionController(
     private fun clearMessages() {
         uiState = uiState.copy(errorMessage = null, infoMessage = null)
     }
-
-    private fun revealQuestion() = dispatch(QuestionRevealed)
 
     private fun createEngine(pack: Package): GameEngine = GameEngine(pack)
 

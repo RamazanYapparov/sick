@@ -75,7 +75,7 @@ class GameEngineLobbyTest {
     fun `listener is notified on each successful event`() {
         val engine = engine()
         val notifications = mutableListOf<Pair<GameState, GamePhase>>()
-        engine.addListener { _, state, _, phase -> notifications.add(state to phase) }
+        engine.addListener { notifications.add(it.state to it.phase) }
 
         engine.process(PlayerJoined("Alice"))
         engine.process(PlayerJoined("Bob"))
@@ -97,7 +97,7 @@ class GameEngineLobbyTest {
     fun `failed events do not trigger listener`() {
         val engine = engine()
         var callCount = 0
-        engine.addListener { _, _, _, _ -> callCount++ }
+        engine.addListener { callCount++ }
 
         engine.process(QuestionSelected(UUID.randomUUID()))  // invalid in Lobby
 

@@ -45,24 +45,21 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
     // Listeners run under `lock` so addListener / removeListener / notifyListeners
     // are all serialised. The listener type therefore does not need to be
     // CopyOnWriteArrayList; we keep a regular ArrayList.
-    private val listeners =
-        mutableListOf<(GameState, GameState, GamePhase, GamePhase) -> Unit>()
+    private val listeners = mutableListOf<(EngineTransition) -> Unit>()
 
     /**
-     * Subscribe to phase transitions. Each successful `process(event)` triggers
-     * every registered listener once with the (previousState, currentState,
-     * previousPhase, currentPhase) snapshot. Listeners are invoked UNDER the
-     * engine's monitor lock so they observe a consistent view, but because the
-     * lock is reentrant another goroutine / thread could attempt synchronous
-     * re-entry by calling `engine.process` from a listener — DO NOT do that.
-     * Dispatch from listeners via an external coroutine, or via the engine's
-     * own queue if one is added later.
+     * Subscribe to transitions. Each successful `process(event)` calls every
+     * registered listener once with an [EngineTransition]. Listeners are invoked
+     * UNDER the engine's monitor lock so they observe a consistent view, but
+     * because the lock is reentrant a listener could synchronously re-enter
+     * `engine.process` — DO NOT do that. Dispatch from listeners via an external
+     * coroutine or another thread's queue.
      */
-    fun addListener(listener: (GameState, GameState, GamePhase, GamePhase) -> Unit) {
+    fun addListener(listener: (EngineTransition) -> Unit) {
         synchronized(lock) { listeners.add(listener) }
     }
 
-    fun removeListener(listener: (GameState, GameState, GamePhase, GamePhase) -> Unit) {
+    fun removeListener(listener: (EngineTransition) -> Unit) {
         synchronized(lock) { listeners.remove(listener) }
     }
 
@@ -82,7 +79,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             _state = newState
             _phase = nextPhase(event, oldState)
             logger.debug { "process: ${event::class.simpleName} $_previousPhase -> $_phase (${_state.timerRemaining}s)" }
-            notifyListeners()
+            notifyListeners(event)
             _state
         }
     }
@@ -380,7 +377,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             .flatMap { it.questions }
             .find { it.id == id }
 
-    private fun notifyListeners() {
-        listeners.forEach { it(_previousState, _state, _previousPhase, _phase) }
+    private fun notifyListeners(event: GameEvent) {
+        val transition = EngineTransition(event, _previousState, _state, _previousPhase, _phase)
+        listeners.forEach { it(transition) }
     }
 }

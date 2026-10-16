@@ -1,11 +1,13 @@
 package app.ui.window
 
+import app.session.MediaSlot
 import app.state.AudioPlaybackState
 import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.coordinatesLabel
 import app.state.displayContents
 import app.state.isImage
+import app.state.mediaIndexOf
 import app.ui.media.AudioPlayer
 import app.ui.media.AudioProgress
 import app.ui.media.VideoPlayer
@@ -83,9 +85,8 @@ internal fun AnswerPanel(
     compact: Boolean,
     bodySize: TextUnit,
     audioPlayback: AudioPlaybackState,
-    onMediaFinished: () -> Unit = {},
-    mediaStopSignal: Int = 0,
-    mediaPaused: Boolean = false,
+    media: MediaSlot? = null,
+    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
 ) {
     val answer = question.answer
     Card(
@@ -119,15 +120,15 @@ internal fun AnswerPanel(
                     if (answer.contents.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Divider(color = Palette.DividerColor)
-                        displayContents(answer.contents, basePath).forEach { item ->
+                        val items = displayContents(answer.contents, basePath)
+                        items.forEach { item ->
                             RenderQuestionDisplayItem(
                                 item = item,
                                 compact = compact,
                                 bodySize = bodySize,
                                 audioPlayback = audioPlayback,
-                                onMediaFinished = onMediaFinished,
-                                mediaStopSignal = mediaStopSignal,
-                                mediaPaused = mediaPaused,
+                                media = media?.takeIf { it.index == items.mediaIndexOf(item) },
+                                onMediaEnded = onMediaEnded,
                             )
                         }
                     }
@@ -168,8 +169,8 @@ internal fun AnswerPanel(
 
 /**
  * [point] marks a [Answer.Point] on image items; other item types ignore it.
- * Video and audio items are keyed on [mediaReplaySignal]: bumping it disposes
- * their players and starts fresh ones from the beginning.
+ * A video or audio item shows only while it is the current [media]; its player
+ * is keyed on the slot, so a new generation (a replay) starts a fresh one.
  */
 @Composable
 internal fun RenderQuestionDisplayItem(
@@ -177,10 +178,8 @@ internal fun RenderQuestionDisplayItem(
     compact: Boolean,
     bodySize: TextUnit,
     audioPlayback: AudioPlaybackState,
-    onMediaFinished: () -> Unit = {},
-    mediaStopSignal: Int = 0,
-    mediaPaused: Boolean = false,
-    mediaReplaySignal: Int = 0,
+    media: MediaSlot? = null,
+    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
     point: Answer.Point? = null,
 ) {
     when (item) {
@@ -214,71 +213,46 @@ internal fun RenderQuestionDisplayItem(
             else
                 Text("Image unavailable: ${item.url}", color = Color.Red, fontSize = bodySize)
         }
-        is QuestionDisplayItem.LocalVideo -> key(mediaReplaySignal) {
-            if (compact) {
-                // Compact (host) view: video plays but is muted so audio
-                // stays unique to the shared display window.
-                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-                VideoPlayer(
-                    uri = uri,
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    muted = true,
-                    onFinished = onMediaFinished,
-                )
-            } else {
-                val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
-                VideoPlayer(
-                    uri = uri,
-                    modifier = Modifier.fillMaxWidth().height(360.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
+        is QuestionDisplayItem.LocalVideo -> MediaItem(media, onMediaEnded) { paused, onFinished ->
+            val uri = remember(item.absolutePath) { normalizeMediaUri(item.absolutePath) }
+            QuestionVideo(uri, compact, paused, onFinished)
         }
-        is QuestionDisplayItem.RemoteVideo -> key(mediaReplaySignal) {
-            if (compact) {
-                VideoPlayer(
-                    uri = item.url.toString(),
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    muted = true,
-                    onFinished = onMediaFinished,
-                )
-            } else {
-                VideoPlayer(
-                    uri = item.url.toString(),
-                    modifier = Modifier.fillMaxWidth().height(360.dp),
-                    stopSignal = mediaStopSignal,
-                    paused = mediaPaused,
-                    onFinished = onMediaFinished,
-                )
-            }
+        is QuestionDisplayItem.RemoteVideo -> MediaItem(media, onMediaEnded) { paused, onFinished ->
+            QuestionVideo(item.url.toString(), compact, paused, onFinished)
         }
-        is QuestionDisplayItem.LocalAudio -> key(mediaReplaySignal) {
-            AudioItem(
-                uri = item.absolutePath,
-                compact = compact,
-                audioPlayback = audioPlayback,
-                onMediaFinished = onMediaFinished,
-                mediaStopSignal = mediaStopSignal,
-                mediaPaused = mediaPaused,
-            )
+        is QuestionDisplayItem.LocalAudio -> MediaItem(media, onMediaEnded) { paused, onFinished ->
+            AudioItem(item.absolutePath, compact, audioPlayback, paused, onFinished)
         }
-        is QuestionDisplayItem.RemoteAudio -> key(mediaReplaySignal) {
-            AudioItem(
-                uri = item.url.toString(),
-                compact = compact,
-                audioPlayback = audioPlayback,
-                onMediaFinished = onMediaFinished,
-                mediaStopSignal = mediaStopSignal,
-                mediaPaused = mediaPaused,
-            )
+        is QuestionDisplayItem.RemoteAudio -> MediaItem(media, onMediaEnded) { paused, onFinished ->
+            AudioItem(item.url.toString(), compact, audioPlayback, paused, onFinished)
         }
     }
+}
+
+/** Composes [player] only while [media] is set, keyed on its generation and index. */
+@Composable
+private fun MediaItem(
+    media: MediaSlot?,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
+    player: @Composable (paused: Boolean, onFinished: () -> Unit) -> Unit,
+) {
+    if (media == null) return
+    key(media.generation, media.index) {
+        player(media.paused) { onMediaEnded(media.generation, media.index) }
+    }
+}
+
+@Composable
+private fun QuestionVideo(uri: String, compact: Boolean, paused: Boolean, onFinished: () -> Unit) {
+    // Compact (host) view: video plays but is muted so audio stays unique to
+    // the shared display window.
+    VideoPlayer(
+        uri = uri,
+        modifier = Modifier.fillMaxWidth().height(if (compact) 200.dp else 360.dp),
+        paused = paused,
+        muted = compact,
+        onFinished = onFinished,
+    )
 }
 
 @Composable
@@ -333,9 +307,8 @@ private fun AudioItem(
     uri: String,
     compact: Boolean,
     audioPlayback: AudioPlaybackState,
-    onMediaFinished: () -> Unit,
-    mediaStopSignal: Int,
-    mediaPaused: Boolean,
+    paused: Boolean,
+    onFinished: () -> Unit,
 ) {
     if (compact) {
         // Compact (host) view: progress only. The shared display window owns
@@ -345,9 +318,8 @@ private fun AudioItem(
         AudioPlayer(
             uri = uri,
             playback = audioPlayback,
-            stopSignal = mediaStopSignal,
-            paused = mediaPaused,
-            onFinished = onMediaFinished,
+            paused = paused,
+            onFinished = onFinished,
         )
     }
 }

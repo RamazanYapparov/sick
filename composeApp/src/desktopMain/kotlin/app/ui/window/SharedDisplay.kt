@@ -9,6 +9,7 @@ import app.state.DesktopUiState
 import app.state.QuestionDisplayItem
 import app.state.displayContents
 import app.state.isImage
+import app.state.mediaIndexOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,8 +48,7 @@ internal fun SharedDisplayScreen(
     state: DesktopUiState,
     compact: Boolean,
     audioPlayback: AudioPlaybackState,
-    onQuestionMediaFinished: () -> Unit,
-    onAnswerMediaFinished: () -> Unit,
+    onMediaEnded: (generation: Int, index: Int) -> Unit,
 ) {
     val pad = if (compact) 12.dp else 24.dp
     val bodySize = if (compact) 12.sp else 22.sp
@@ -77,14 +77,13 @@ internal fun SharedDisplayScreen(
                         compact,
                         bodySize,
                         audioPlayback = audioPlayback,
-                        onMediaFinished = onAnswerMediaFinished,
-                        mediaStopSignal = state.mediaStopSignal,
-                        mediaPaused = state.mediaPaused,
+                        media = state.playback.media,
+                        onMediaEnded = onMediaEnded,
                     )
                 state.phase == GamePhase.RevealingQuestion && state.currentQuestion != null ->
                     RevealingQuestionPlaceholder(state, compact, bodySize)
                 state.currentQuestion != null ->
-                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onQuestionMediaFinished)
+                    CurrentQuestionPanel(state, compact, bodySize, timerSize, audioPlayback, onMediaEnded)
                 state.phase == GamePhase.Lobby && state.hasPack ->
                     LobbyPanel(state, compact)
                 else ->
@@ -284,7 +283,7 @@ internal fun CurrentQuestionPanel(
     bodySize: TextUnit,
     timerSize: TextUnit,
     audioPlayback: AudioPlaybackState,
-    onMediaFinished: () -> Unit = {},
+    onMediaEnded: (generation: Int, index: Int) -> Unit = { _, _ -> },
     revealAnswerPoint: Boolean = false,
 ) {
     val question = state.currentQuestion ?: return
@@ -349,10 +348,8 @@ internal fun CurrentQuestionPanel(
                     compact = compact,
                     bodySize = size,
                     audioPlayback = audioPlayback,
-                    onMediaFinished = onMediaFinished,
-                    mediaStopSignal = state.mediaStopSignal,
-                    mediaPaused = state.mediaPaused,
-                    mediaReplaySignal = state.mediaReplaySignal,
+                    media = state.playback.media?.takeIf { it.index == contents.mediaIndexOf(item) },
+                    onMediaEnded = onMediaEnded,
                     point = answerPoint.takeIf { item === pointImage },
                 )
             }
@@ -413,7 +410,7 @@ private fun QuestionContent(
                 index to subcompose("media" to index) { renderItem(item, fixedBodySize) }
                     .map { it.measure(Constraints(maxWidth = width, maxHeight = maxHeight)) }
             }
-        val mediaHeight = media.values.sumOf { slot -> slot.sumOf { it.height } } + gapPx * media.size
+        val mediaHeight = media.values.sumOf { slot -> slot.sumOf { it.height } } + gapPx * media.values.count { it.isNotEmpty() }
 
         val probes = mutableMapOf<Int, Int>()
         fun fits(sp: Int): Boolean = probes.getOrPut(sp) {

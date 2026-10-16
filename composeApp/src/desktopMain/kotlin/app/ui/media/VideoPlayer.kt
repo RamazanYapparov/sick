@@ -95,7 +95,6 @@ private fun createVideoSurfaceAdapter(): VideoSurfaceAdapter {
 fun VideoPlayer(
     uri: String,
     modifier: Modifier = Modifier,
-    stopSignal: Int = 0,
     paused: Boolean = false,
     muted: Boolean = false,
     onFinished: () -> Unit = {},
@@ -106,7 +105,6 @@ fun VideoPlayer(
     val heightRef = remember { mutableStateOf(0) }
     var totalMs by remember { mutableStateOf(0.0) }
     var currentMs by remember { mutableStateOf(0.0) }
-    val lastStopSignal = remember { mutableStateOf(stopSignal) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val normalizedUri = remember(uri) { normalizeMediaUri(uri) }
@@ -196,6 +194,7 @@ fun VideoPlayer(
             onCurrentMs = { currentMs = it },
             onErrorMsg = { errorMessage = it },
             onFinished = onFinished,
+            onErrorExtra = { onFinished() },
         )
         mediaPlayer.events().addMediaPlayerEventListener(listener)
 
@@ -212,6 +211,7 @@ fun VideoPlayer(
         } catch (t: Throwable) {
             logger.error(t) { "VideoPlayer: media().play($uri) failed" }
             errorMessage = "Could not start playback: ${t.message}"
+            onFinished()
         }
 
         onDispose {
@@ -226,14 +226,6 @@ fun VideoPlayer(
             }
         }
     }
-
-    StopSignalEffect(
-        stopSignal = stopSignal,
-        lastStopSignal = lastStopSignal,
-        playerRef = { playerRef.get() },
-        tag = "VideoPlayer",
-        onStop = { currentFrame = null },
-    )
 
     PauseEffect(
         paused = paused,

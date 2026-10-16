@@ -37,8 +37,12 @@ An answer that is a spot on the question image (SIQ `answerType="point"`), with 
 _Avoid_: Coordinates answer, map answer
 
 **Media Replay**:
-The host restarting the question's audio or video from the beginning after its first playback has ended. The question timer keeps running: if it expires during a replay, the replay stops and the question ends. A Buzz pauses a replay the same way it pauses the first playback.
+The host restarting the question's audio and video from the first one after the Media Hold has ended. The question timer keeps running: if it expires during a replay, the replay stops and the question ends. A Buzz pauses a replay the same way it pauses the first playback.
 _Avoid_: Repeat, replay sound
+
+**Media Hold**:
+The stretch while the question's audio and video play for the first time, one after another in pack order, during which the question timer does not run. A missing or failing media passes the turn to the next one. It ends after the first playback of the last media, or when the host skips it.
+_Avoid_: Media pending, waiting for media
 
 ### Judging
 

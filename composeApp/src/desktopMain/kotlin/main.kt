@@ -32,8 +32,7 @@ fun main() {
                 SharedDisplayApp(
                     uiState,
                     controller.audioPlayback,
-                    onQuestionMediaFinished = controller::questionMediaFinished,
-                    onAnswerMediaFinished = controller::answerMediaFinished,
+                    onMediaEnded = controller::mediaEnded,
                 )
             }
         }

@@ -166,9 +166,8 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 compact = true,
                                 bodySize = 12.sp,
                                 audioPlayback = controller.audioPlayback,
-                                onMediaFinished = controller::answerMediaFinished,
-                                mediaStopSignal = state.mediaStopSignal,
-                                mediaPaused = state.mediaPaused,
+                                media = state.playback.media,
+                                onMediaEnded = controller::mediaEnded,
                             )
                         } else if (state.phase == GamePhase.RevealingQuestion) {
                             // Match the shared display: don't show question content
@@ -186,7 +185,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                 bodySize = 12.sp,
                                 timerSize = 24.sp,
                                 audioPlayback = controller.audioPlayback,
-                                onMediaFinished = controller::questionMediaFinished,
+                                onMediaEnded = controller::mediaEnded,
                                 revealAnswerPoint = true,
                             )
                         }

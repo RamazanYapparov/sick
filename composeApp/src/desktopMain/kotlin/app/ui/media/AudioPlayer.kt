@@ -47,14 +47,12 @@ fun AudioPlayer(
     playback: AudioPlaybackState,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
-    stopSignal: Int = 0,
     paused: Boolean = false,
     onFinished: () -> Unit = {},
 ) {
     val normalizedUri = remember(uri) { normalizeMediaUri(uri) }
 
     val playerRef = remember { AtomicReference<MediaPlayer?>(null) }
-    val lastStopSignal = remember { mutableStateOf(stopSignal) }
 
     DisposableEffect(normalizedUri) {
         playback.start(normalizedUri)
@@ -80,6 +78,7 @@ fun AudioPlayer(
         } catch (t: Throwable) {
             logger.error(t) { "AudioPlayer: media().play($uri) failed" }
             playback.fail("Could not start playback: ${t.message}")
+            onFinished()
         }
 
         onDispose {
@@ -95,14 +94,6 @@ fun AudioPlayer(
             }
         }
     }
-
-    StopSignalEffect(
-        stopSignal = stopSignal,
-        lastStopSignal = lastStopSignal,
-        playerRef = { playerRef.get() },
-        tag = "AudioPlayer",
-        onStop = playback::finish,
-    )
 
     PauseEffect(
         paused = paused,

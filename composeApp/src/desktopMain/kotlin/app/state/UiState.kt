@@ -1,5 +1,6 @@
 package app.state
 
+import app.session.PlaybackView
 import app.session.ScannedPackInfo
 import com.sick.engine.GameEngine
 import com.sick.model.Player
@@ -32,13 +33,7 @@ data class DesktopUiState(
     val timerRemaining: Int,
     val isTimerPaused: Boolean,
     val answerTimerRemaining: Int,
-    val mediaActive: Boolean,
-    val mediaStopSignal: Int,
-    val mediaPaused: Boolean,
-    /** Bumped by every host replay; media items are keyed on it so a replay restarts them. */
-    val mediaReplaySignal: Int,
-    /** A host replay of the question media is playing; the question timer runs meanwhile. */
-    val mediaReplaying: Boolean,
+    val playback: PlaybackView = PlaybackView(),
     val errorMessage: String?,
     val infoMessage: String?,
     val serverUrl: String,
@@ -68,11 +63,6 @@ data class DesktopUiState(
             timerRemaining = 0,
             isTimerPaused = false,
             answerTimerRemaining = 20,
-            mediaActive = false,
-            mediaStopSignal = 0,
-            mediaPaused = false,
-            mediaReplaySignal = 0,
-            mediaReplaying = false,
             errorMessage = null,
             infoMessage = null,
             serverUrl = "http://localhost:$port",

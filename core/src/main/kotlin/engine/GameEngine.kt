@@ -168,6 +168,9 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             // Both a phone Buzz and a Host Pick arrive here. In ShowingQuestion the
             // first one makes the Answering Player; in PlayerAnswering it is a Late Buzz.
             is PlayerBuzzed -> {
+                ensure(_state.players.any { it.id == event.playerId }) {
+                    GameError.PlayerError(com.sick.service.PlayerError.NotFound(event.playerId))
+                }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(_state.buzzes.none { it.playerId == event.playerId }) { GameError.InvalidEvent(event, _phase) }
@@ -185,6 +188,9 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             }
 
             is PlayerSkipped -> {
+                ensure(_state.players.any { it.id == event.playerId }) {
+                    GameError.PlayerError(com.sick.service.PlayerError.NotFound(event.playerId))
+                }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 val newSkipVotes = _state.skipVotePlayerIds + event.playerId

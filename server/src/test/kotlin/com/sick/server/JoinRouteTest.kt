@@ -12,6 +12,7 @@ import io.ktor.http.Parameters
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 private fun emptyEngine(): GameEngine =
@@ -32,13 +33,13 @@ class JoinRouteTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val player = engine.state.players.find { it.name == "Alice" }!!
         assertTrue(response.bodyAsText().contains(player.id.toString()))
+        assertTrue(response.bodyAsText().contains("reconnectToken"))
     }
 
     @Test
-    fun `POST join with existing name returns same playerId without creating duplicate`() = testApplication {
+    fun `POST join with existing name and no token returns 403`() = testApplication {
         val engine = emptyEngine()
         engine.process(PlayerJoined("Alice"))
-        val aliceId = engine.state.players.first().id
         application { installJoinRoute(engine) }
 
         val response = client.submitForm(
@@ -46,9 +47,33 @@ class JoinRouteTest {
             formParameters = Parameters.build { append("name", "Alice") },
         )
 
-        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
         assertEquals(1, engine.state.players.size)
-        assertTrue(response.bodyAsText().contains(aliceId.toString()))
+    }
+
+    @Test
+    fun `POST join with issued reconnect token returns the same playerId`() = testApplication {
+        val engine = emptyEngine()
+        application { installJoinRoute(engine) }
+        val first = client.submitForm(
+            url = "/join",
+            formParameters = Parameters.build { append("name", "Alice") },
+        )
+        val body = first.bodyAsText()
+        val playerId = engine.state.players.single().id
+        val token = reconnectTokenFrom(body)
+
+        val reconnect = client.submitForm(
+            url = "/join",
+            formParameters = Parameters.build {
+                append("name", "Alice")
+                append("reconnectToken", token)
+            },
+        )
+
+        assertEquals(HttpStatusCode.OK, reconnect.status)
+        assertTrue(reconnect.bodyAsText().contains(playerId.toString()))
+        assertEquals(1, engine.state.players.size)
     }
 
     @Test
@@ -91,19 +116,35 @@ class JoinRouteTest {
     }
 
     @Test
-    fun `POST join with existing name after game started returns playerId`() = testApplication {
+    fun `POST join with existing name after game started requires reconnect token`() = testApplication {
         val engine = emptyEngine()
-        engine.process(PlayerJoined("Alice"))
-        val aliceId = engine.state.players.first().id
-        engine.process(StartGame)
         application { installJoinRoute(engine) }
-
-        val response = client.submitForm(
+        val first = client.submitForm(
             url = "/join",
             formParameters = Parameters.build { append("name", "Alice") },
         )
+        val token = reconnectTokenFrom(first.bodyAsText())
+        val aliceId = engine.state.players.single().id
+        engine.process(StartGame)
 
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertTrue(response.bodyAsText().contains(aliceId.toString()))
+        val rejected = client.submitForm(
+            url = "/join",
+            formParameters = Parameters.build { append("name", "Alice") },
+        )
+        val accepted = client.submitForm(
+            url = "/join",
+            formParameters = Parameters.build {
+                append("name", "Alice")
+                append("reconnectToken", token)
+            },
+        )
+
+        assertEquals(HttpStatusCode.Forbidden, rejected.status)
+        assertFalse(rejected.bodyAsText().contains(aliceId.toString()))
+        assertEquals(HttpStatusCode.OK, accepted.status)
+        assertTrue(accepted.bodyAsText().contains(aliceId.toString()))
     }
+
+    private fun reconnectTokenFrom(json: String): String =
+        requireNotNull(Regex("\\\"reconnectToken\\\":\\\"([^\\\"]+)\\\"").find(json)?.groupValues?.get(1))
 }

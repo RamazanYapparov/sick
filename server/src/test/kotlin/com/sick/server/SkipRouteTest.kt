@@ -133,4 +133,18 @@ class SkipRouteTest {
         assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
         assertFalse(playerId in engine.state.skipVotePlayerIds)
     }
+
+    @Test
+    fun `POST skip returns 410 for a player id not in the game`() = testApplication {
+        val (engine, _) = engineAtShowingQuestion()
+        application { installSkipRoute(engine) { true } }
+
+        val response = client.submitForm(
+            url = "/skip",
+            formParameters = Parameters.build { append("playerId", UUID.randomUUID().toString()) },
+        )
+
+        assertEquals(HttpStatusCode.Gone, response.status)
+        assertTrue(engine.state.skipVotePlayerIds.isEmpty())
+    }
 }

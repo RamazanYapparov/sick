@@ -136,4 +136,18 @@ class BuzzRouteTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertNull(engine.state.answeringPlayerId)
     }
+
+    @Test
+    fun `POST buzz returns 410 for a player id not in the game`() = testApplication {
+        val (engine, _) = engineAtShowingQuestion()
+        application { installBuzzRoute(engine) { true } }
+
+        val response = client.submitForm(
+            url = "/buzz",
+            formParameters = Parameters.build { append("playerId", UUID.randomUUID().toString()) },
+        )
+
+        assertEquals(HttpStatusCode.Gone, response.status)
+        assertNull(engine.state.answeringPlayerId)
+    }
 }

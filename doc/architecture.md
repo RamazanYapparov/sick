@@ -78,6 +78,8 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | `HostSkippedAnswer` | Host | PlayerAnswering |
 | `NextRound` | Host | RoundEnd |
 
+`PlayerBuzzed` and `PlayerSkipped` from a player id not in the game (removed by the host, or from a game the host reset or replaced) fail with `PlayerError.NotFound`. `/buzz` and `/skip` answer that with 410 Gone, and the phone page goes back to its join screen.
+
 ### Immutability
 
 All models are immutable (`val` fields). State changes produce new `GameState` instances via `copy()`. `GameEngine` holds the mutable reference internally and exposes read-only `state` and `phase` properties.

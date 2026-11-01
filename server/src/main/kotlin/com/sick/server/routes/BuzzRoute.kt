@@ -35,7 +35,7 @@ fun Application.installBuzzRoute(engine: GameEngine, buzzAllowed: () -> Boolean)
             engine.process(PlayerBuzzed(playerId)).fold(
                 ifLeft = { error ->
                     logger.warn { "/buzz playerId=$playerId rejected: ${error.message}" }
-                    call.respond(HttpStatusCode.BadRequest, error.message)
+                    call.respond(error.httpStatus(), error.message)
                 },
                 ifRight = { state ->
                     if (state.answeringPlayerId == playerId) {

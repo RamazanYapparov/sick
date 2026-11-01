@@ -168,7 +168,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             // Both a phone Buzz and a Host Pick arrive here. In ShowingQuestion the
             // first one makes the Answering Player; in PlayerAnswering it is a Late Buzz.
             is PlayerBuzzed -> {
-                ensureNotNull(_state.findPlayer(event.playerId)) { GameError.PlayerError(PlayerError.NotFound(event.playerId)) }
+                ensureKnownPlayer(event.playerId).bind()
                 ensure(_state.canBuzz(event.playerId)) { GameError.InvalidEvent(event, _phase) }
                 val openedAt = ensureNotNull(_state.buzzWindowOpenedAtNanos) { GameError.InvalidEvent(event, _phase) }
                 val buzzes = _state.buzzes + Buzz(event.playerId, (clock() - openedAt) / 1_000_000)
@@ -184,7 +184,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             }
 
             is PlayerSkipped -> {
-                ensureNotNull(_state.findPlayer(event.playerId)) { GameError.PlayerError(PlayerError.NotFound(event.playerId)) }
+                ensureKnownPlayer(event.playerId).bind()
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 val newSkipVotes = _state.skipVotePlayerIds + event.playerId
@@ -367,6 +367,11 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             else oldState.failedBuzzPlayerIds
         val candidate = oldState.copy(failedBuzzPlayerIds = newFailedIds)
         return if (candidate.allPlayersAccountedFor()) GamePhase.ShowingAnswer else GamePhase.ShowingQuestion
+    }
+
+    /** A phone may still hold the id of a player the host removed, or of a game the host has since replaced. */
+    private fun ensureKnownPlayer(id: UUID): Either<GameError, Unit> = either {
+        ensureNotNull(_state.findPlayer(id)) { GameError.PlayerError(PlayerError.NotFound(id)) }
     }
 
     private fun findQuestion(id: UUID): Question<*>? =

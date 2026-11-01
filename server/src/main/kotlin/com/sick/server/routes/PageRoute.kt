@@ -239,6 +239,18 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
       });
     }
 
+    // 410: the host removed this player, reset the game or loaded another pack, so this player id is gone.
+    function backToJoin() {
+      playerId = null;
+      isInGame = false;
+      if (wakeLockSentinel && !wakeLockSentinel.released) wakeLockSentinel.release();
+      document.getElementById('status').textContent = '';
+      document.getElementById('buzz-section').style.display = 'none';
+      document.querySelector('main').style.display = '';
+      document.getElementById('join-btn').disabled = false;
+      document.getElementById('join-error').textContent = "You're no longer in the game. Join again.";
+    }
+
     function doBuzz() {
       document.getElementById('status').textContent = '';
       if (!playerId) return;
@@ -249,8 +261,9 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'playerId=' + encodeURIComponent(playerId)
       }).then(function(response) {
-        document.getElementById('status').textContent = response.ok ? 'Buzzed!' : 'Too slow!';
         buzzBtn.disabled = false;
+        if (response.status === 410) return backToJoin();
+        document.getElementById('status').textContent = response.ok ? 'Buzzed!' : 'Too slow!';
       }).catch(function() {
         document.getElementById('status').textContent = 'Connection lost.';
         buzzBtn.disabled = false;
@@ -265,6 +278,7 @@ private fun renderBuzzerPage(): String = """<!DOCTYPE html>
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'playerId=' + encodeURIComponent(playerId)
       }).then(function(response) {
+        if (response.status === 410) return backToJoin();
         if (response.ok) {
           document.getElementById('status').textContent = 'Skipped!';
         } else {

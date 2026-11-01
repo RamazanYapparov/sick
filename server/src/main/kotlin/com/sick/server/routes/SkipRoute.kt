@@ -35,7 +35,7 @@ fun Application.installSkipRoute(engine: GameEngine, buzzAllowed: () -> Boolean)
             engine.process(PlayerSkipped(playerId)).fold(
                 ifLeft = { error ->
                     logger.warn { "/skip playerId=$playerId rejected: ${error.message}" }
-                    call.respond(HttpStatusCode.BadRequest, error.message)
+                    call.respond(error.httpStatus(), error.message)
                 },
                 ifRight = {
                     logger.info { "/skip playerId=$playerId OK" }

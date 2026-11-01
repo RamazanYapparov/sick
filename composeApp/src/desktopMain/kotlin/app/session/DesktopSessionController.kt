@@ -66,6 +66,8 @@ class DesktopSessionController(
 
     private var stateChangeCount = 0L
 
+    private var joinUrl: String = lanUrl()
+
     var uiState by mutableStateOf(withGameViews(previous = null))
         private set
 
@@ -162,8 +164,8 @@ class DesktopSessionController(
             },
             ifRight = {
                 logger.debug { "dispatch: ${event::class.simpleName} OK -> ${engine.phase.name}" }
+                // The engine listener publishes once playback has seen the transition.
                 clearMessages()
-                publishState()
                 autoSelectIfSingleCandidate()
             },
         )
@@ -256,20 +258,24 @@ class DesktopSessionController(
         playback = QuestionPlayback(engine, scope)
         engineListener = bindEngine(engine, playback)
         server.start()
+        joinUrl = lanUrl()
         publishState()
         logger.info { "Session replaced with new pack: ${pack.name}" }
     }
 
     /**
-     * Engine listeners run on whichever thread called `engine.process`: the EDT
-     * for host actions and timers, a Ktor worker for phone requests. Playback and
-     * Compose state are EDT-only, so the work hops there when needed. A
-     * transition still queued when the session is replaced reaches only its own,
-     * closed playback.
+     * Engine listeners run under the engine lock on whichever thread called
+     * `engine.process`: the EDT for host actions and timers, a Ktor worker for
+     * phone requests. The work is always queued to the EDT, never run inline:
+     * playback and Compose state are EDT-only, the queue keeps transitions in
+     * engine order whatever thread they came from, and the lock is released
+     * before any UI work, so a waiting Buzz is not delayed by it (its Reaction
+     * Time is read under the lock). A transition still queued when the session
+     * is replaced reaches only its own, closed playback.
      */
     private fun bindEngine(target: GameEngine, targetPlayback: QuestionPlayback): (EngineTransition) -> Unit {
         val listener: (EngineTransition) -> Unit = { transition ->
-            onEdt {
+            EventQueue.invokeLater {
                 targetPlayback.onTransition(transition)
                 if (targetPlayback === playback) publishState()
             }
@@ -292,7 +298,7 @@ class DesktopSessionController(
 
     /** [previous] with fresh audience views and session fields; the initial state when it is null. */
     private fun withGameViews(previous: DesktopUiState?): DesktopUiState {
-        val url = "http://${resolveLanIp()}:$port"
+        val url = joinUrl
         val (host, sharedDisplay) = audienceViews(
             state = engine.state,
             phase = engine.phase,
@@ -327,6 +333,9 @@ class DesktopSessionController(
     }
 
     private fun createEngine(pack: Package): GameEngine = GameEngine(pack)
+
+    /** Looked up when the server (re)starts, not on every published state: it walks every network interface. */
+    private fun lanUrl() = "http://${resolveLanIp()}:$port"
 
     private fun emptyPack() = Package(
         name = "Game",

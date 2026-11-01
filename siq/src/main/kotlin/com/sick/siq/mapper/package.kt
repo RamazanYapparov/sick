@@ -13,7 +13,7 @@ internal fun XmlPackage.toDomain(files: PackFiles) = Package(
     name = name,
     logo = "",
     tags = tags?.tag ?: emptyList(),
-    author = info.authors.author.single(),
+    author = info?.authors?.author.orEmpty().joinToString(", "),
     rounds = rounds?.round?.map { it.toDomain(files) } ?: emptyList()
 )
 

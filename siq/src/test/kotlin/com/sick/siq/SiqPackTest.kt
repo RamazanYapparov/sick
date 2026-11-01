@@ -143,15 +143,24 @@ class SiqPackTest {
         assertFalse(file.parent.parent.exists())
     }
 
-    private fun open(vararg questions: String, files: Map<String, String> = emptyMap()) =
-        SiqPack.open(zip(questions.toList(), files)).also(opened::add).pack
+    @Test
+    fun `a pack credits all of its authors, and opens without any`() {
+        val twoAuthors = open(question(100, text("Q")), info = "<info><authors><author>A</author><author>B</author></authors></info>")
+        val noAuthors = open(question(100, text("Q")), info = "")
+
+        assertEquals("A, B", twoAuthors.author)
+        assertEquals("", noAuthors.author)
+    }
+
+    private fun open(vararg questions: String, files: Map<String, String> = emptyMap(), info: String = AUTHOR_A) =
+        SiqPack.open(zip(questions.toList(), files, info)).also(opened::add).pack
 
     private fun Package.questions() = rounds.flatMap { it.themes }.flatMap { it.questions }
 
-    private fun zip(questions: List<String>, files: Map<String, String>): Path =
+    private fun zip(questions: List<String>, files: Map<String, String>, info: String = AUTHOR_A): Path =
         Files.createTempFile(createTempDirectory("siq-source-"), "pack-", ".siq").also { zip ->
             ZipOutputStream(Files.newOutputStream(zip)).use { output ->
-                (files + ("content.xml" to content(questions))).forEach { (name, contents) ->
+                (files + ("content.xml" to content(questions, info))).forEach { (name, contents) ->
                     output.putNextEntry(ZipEntry(name))
                     output.write(contents.toByteArray())
                     output.closeEntry()
@@ -160,10 +169,12 @@ class SiqPackTest {
         }
 
     private companion object {
-        fun content(questions: List<String>) = """
+        const val AUTHOR_A = "<info><authors><author>a</author></authors></info>"
+
+        fun content(questions: List<String>, info: String) = """
             <?xml version="1.0" encoding="utf-8"?>
             <package name="p" version="5" xmlns="https://github.com/VladimirKhil/SI/blob/master/assets/siq_5.xsd">
-              <info><authors><author>a</author></authors></info>
+              $info
               <rounds><round name="R"><themes><theme name="T"><questions>
                 ${questions.joinToString("\n")}
               </questions></theme></themes></round></rounds>

@@ -106,7 +106,8 @@ internal fun PlayerEditorRow(
                 }
             } else {
                 PlayerTitle(player)
-                val buttonEnabled = scoreDelta.isNotBlank() && scoreDelta != "0"
+                // Digits only, but too many of them overflow Int: such a delta enables nothing.
+                val delta = scoreDelta.toIntOrNull()?.takeIf { it != 0 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -122,19 +123,19 @@ internal fun PlayerEditorRow(
                     )
                     Button(
                         onClick = {
-                            onAdjustScore(scoreDelta.toInt())
+                            delta?.let(onAdjustScore)
                             expanded = false
                         },
-                        enabled = buttonEnabled,
+                        enabled = delta != null,
                     ) {
                         Text("+")
                     }
                     Button(
                         onClick = {
-                            onAdjustScore(-scoreDelta.toInt())
+                            delta?.let { onAdjustScore(-it) }
                             expanded = false
                         },
-                        enabled = buttonEnabled,
+                        enabled = delta != null,
                     ) {
                         Text("−")
                     }

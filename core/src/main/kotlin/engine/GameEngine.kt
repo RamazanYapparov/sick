@@ -96,8 +96,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
                 StartGame::class,
                 AdjustPlayerScore::class,
             )
-            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, SkipRound::class, AdjustPlayerScore::class)
-            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, SkipRound::class, AdjustPlayerScore::class)
+            GamePhase.ChoosingPlayer -> setOf(SelectActivePlayer::class, SkipRound::class, AdjustPlayerScore::class, PlayerLeft::class)
+            GamePhase.ChoosingQuestion -> setOf(QuestionSelected::class, SkipRound::class, AdjustPlayerScore::class, PlayerLeft::class)
             GamePhase.RevealingQuestion -> setOf(QuestionRevealed::class, SkipQuestion::class, AdjustPlayerScore::class)
             GamePhase.ShowingQuestion -> setOf(
                 PlayerBuzzed::class,
@@ -122,8 +122,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
                 AnswerTimerExpired::class,
             )
             GamePhase.ShowingAnswer -> setOf(AnswerShown::class, AdjustPlayerScore::class)
-            GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class)
-            GamePhase.GameOver -> setOf(AdjustPlayerScore::class)
+            GamePhase.RoundEnd -> setOf(NextRound::class, AdjustPlayerScore::class, PlayerLeft::class)
+            GamePhase.GameOver -> setOf(AdjustPlayerScore::class, PlayerLeft::class)
         }
         if (event::class !in allowed) {
             return GameError.InvalidEvent(event, _phase)
@@ -135,6 +135,8 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             is PlayerBuzzed -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
             // A paused answer timer cannot expire; a stale expiry must not penalise the player.
             is AnswerTimerExpired -> if (_state.isTimerPaused) GameError.InvalidEvent(event, _phase) else null
+            // A started game keeps at least one player.
+            is PlayerLeft -> if (_phase != GamePhase.Lobby && _state.players.size <= 1) GameError.InvalidEvent(event, _phase) else null
             else -> null
         }
     }
@@ -143,6 +145,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
         when (event) {
             is PlayerJoined  -> _state.addPlayer(event.name).mapLeft { GameError.PlayerError(it) }.bind()
             is PlayerLeft    -> _state.removePlayer(event.playerId).mapLeft { GameError.PlayerError(it) }.bind()
+                .let { if (it.activePlayerId == event.playerId) it.copy(activePlayerId = null) else it }
             is PlayerRenamed -> _state.renamePlayer(event.playerId, event.newName).mapLeft { GameError.PlayerError(it) }.bind()
             is StartGame     -> _state
 
@@ -168,6 +171,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             // Both a phone Buzz and a Host Pick arrive here. In ShowingQuestion the
             // first one makes the Answering Player; in PlayerAnswering it is a Late Buzz.
             is PlayerBuzzed -> {
+                ensureNotNull(_state.findPlayer(event.playerId)) { GameError.PlayerError(PlayerError.NotFound(event.playerId)) }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(_state.buzzes.none { it.playerId == event.playerId }) { GameError.InvalidEvent(event, _phase) }
@@ -185,6 +189,7 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             }
 
             is PlayerSkipped -> {
+                ensureNotNull(_state.findPlayer(event.playerId)) { GameError.PlayerError(PlayerError.NotFound(event.playerId)) }
                 ensure(event.playerId !in _state.failedBuzzPlayerIds) { GameError.InvalidEvent(event, _phase) }
                 ensure(event.playerId !in _state.skipVotePlayerIds) { GameError.InvalidEvent(event, _phase) }
                 val newSkipVotes = _state.skipVotePlayerIds + event.playerId
@@ -353,9 +358,11 @@ class GameEngine(pack: Package, private val clock: () -> Long = System::nanoTime
             else -> GamePhase.ChoosingQuestion
         }
         is NextRound -> if (_state.isGameOver) GamePhase.GameOver else GamePhase.ChoosingPlayer
+        // The host picks a new chooser when the current one is removed.
+        is PlayerLeft -> if (_phase == GamePhase.ChoosingQuestion && oldState.activePlayerId == event.playerId) GamePhase.ChoosingPlayer else _phase
         // Phase-preserving events: every arm keeps the FSM in `_phase`.
         is PauseTimer, is ResumeTimer,
-        is PlayerJoined, is PlayerLeft, is PlayerRenamed,
+        is PlayerJoined, is PlayerRenamed,
         is TimerTick, is AdjustPlayerScore, is AnswerTimerTick -> _phase
     }
 

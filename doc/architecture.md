@@ -65,7 +65,7 @@ RoundEnd ──[NextRound]──→ ChoosingPlayer | GameOver
 | Event | Source | Phase |
 |-------|--------|-------|
 | `PlayerJoined(name)` | Player phone | Lobby |
-| `PlayerLeft(playerId)` | Player phone | Lobby |
+| `PlayerLeft(playerId)` | Host (Remove button) | Lobby, ChoosingPlayer, ChoosingQuestion, RoundEnd, GameOver; not the last player once started; removing the chooser in ChoosingQuestion returns to ChoosingPlayer |
 | `PlayerRenamed(playerId, newName)` | Player phone | Lobby |
 | `StartGame` | Host | Lobby |
 | `SelectActivePlayer(playerId)` | Host | ChoosingPlayer |

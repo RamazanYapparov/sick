@@ -21,6 +21,7 @@ import com.sick.event.HostSkippedAnswer
 import com.sick.event.NextRound
 import com.sick.event.PauseTimer
 import com.sick.event.PlayerBuzzed
+import com.sick.event.PlayerLeft
 import com.sick.event.QuestionRevealed
 import com.sick.event.QuestionSelected
 import com.sick.event.ResumeTimer
@@ -159,6 +160,7 @@ class DesktopSessionController(
     fun showAnswer() = dispatch(AnswerShown)
     fun nextRound() = dispatch(NextRound)
     fun adjustScore(playerId: UUID, delta: Int) = dispatch(AdjustPlayerScore(playerId, delta))
+    fun removePlayer(playerId: UUID) = dispatch(PlayerLeft(playerId))
 
     fun pauseTimer() = dispatch(PauseTimer, setMediaPaused = true)
     // Media paused by a buzz stays paused while the player answers; onPhaseChange

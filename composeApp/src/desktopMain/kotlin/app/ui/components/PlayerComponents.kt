@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +69,24 @@ internal fun PlayerEditorRow(
     onAdjustScore: (Int) -> Unit,
     backgroundColor: Color = Palette.DarkSurface,
     reactionMillis: Long? = null,
+    canRemove: Boolean,
+    onRemove: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text("Remove ${player.name}?") },
+            text = { Text("Their score (${player.score}) will be lost.") },
+            confirmButton = {
+                Button(onClick = { confirmRemove = false; onRemove() }) { Text("Remove") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRemove = false }) { Text("Cancel") }
+            },
+        )
+    }
     Card(backgroundColor = backgroundColor, shape = RoundedCornerShape(16.dp), elevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!expanded) {
@@ -77,8 +96,13 @@ internal fun PlayerEditorRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     PlayerTitle(player, reactionMillis)
-                    Button(onClick = { expanded = true }) {
-                        Text("Edit")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { expanded = true }) {
+                            Text("Edit")
+                        }
+                        OutlinedButton(onClick = { confirmRemove = true }, enabled = canRemove) {
+                            Text("Remove")
+                        }
                     }
                 }
             } else {

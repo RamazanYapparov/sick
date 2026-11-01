@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -83,8 +84,11 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                     if (state.players.isEmpty()) {
                         Text("No players yet. Players join via the buzzer URL.")
                     } else {
+                        // Mirrors GameEngine: between questions only, and a started game keeps one player.
+                        val canRemovePlayer = state.phase == GamePhase.Lobby ||
+                            (state.phase in REMOVABLE_PHASES && state.players.size > 1)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.players.forEach { player ->
+                            state.players.forEach { player -> key(player.id) {
                                 val scoreKey = player.id.toString()
                                 val scoreValue = scoreDrafts.getOrPut(scoreKey) { "100" }
                                 val playerBg = when {
@@ -99,8 +103,10 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
                                     onAdjustScore = { controller.adjustScore(player.id, it) },
                                     backgroundColor = playerBg,
                                     reactionMillis = state.reactionTimes[player.id],
+                                    canRemove = canRemovePlayer,
+                                    onRemove = { controller.removePlayer(player.id) },
                                 )
-                            }
+                            } }
                         }
                     }
                 }
@@ -210,6 +216,9 @@ internal fun HostWindowContent(controller: DesktopSessionController, state: Desk
     }
 }
 
-
-
-
+private val REMOVABLE_PHASES = setOf(
+    GamePhase.ChoosingPlayer,
+    GamePhase.ChoosingQuestion,
+    GamePhase.RoundEnd,
+    GamePhase.GameOver,
+)

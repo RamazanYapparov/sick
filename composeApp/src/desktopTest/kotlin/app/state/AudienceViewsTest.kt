@@ -81,6 +81,19 @@ class AudienceViewsTest {
     }
 
     @Test
+    fun `only the host sees the pack's wrong answers when the answer is shown`() {
+        val question = question(Content.Text("Q"), answer = Answer.Simple(right = listOf("yes"), wrong = listOf("no")))
+        val table = Table(question).start()
+        table.go(QuestionSelected(question.id))
+        table.go(QuestionRevealed)
+
+        table.go(SkipQuestion)
+        val views = table.views()
+        assertEquals(listOf("no"), assertIs<Panel.Answer>(views.host.panel).wrongAnswers)
+        assertEquals(emptyList(), assertIs<Panel.Answer>(views.sharedDisplay.panel).wrongAnswers)
+    }
+
+    @Test
     fun `a Chooser who fails keeps the Chooser mark alongside the Failed role`() {
         val question = simple()
         val table = Table(question, "Alice", "Bob").start()

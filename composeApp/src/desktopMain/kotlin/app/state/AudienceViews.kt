@@ -66,6 +66,8 @@ sealed interface Panel {
         val answer: PackAnswer,
         /** Simple: the answer's own content. Point: the question image with the spot, or none if it has no image. */
         val items: List<ShownItem>,
+        /** The pack's wrong answers; only the host sees them, so the room never takes them for accepted ones. */
+        val wrongAnswers: List<String>,
         val ownsSound: Boolean,
     ) : Panel
 
@@ -224,6 +226,7 @@ private fun questionPanel(
                 is PackAnswer.Select -> emptyList()
                 is PackAnswer.Point -> listOf(ShownItem(answer.image.toDisplayItem(), point = answer))
             },
+            wrongAnswers = (question.answer as? PackAnswer.Simple)?.wrong?.takeIf { host }.orEmpty(),
             ownsSound = !host,
         )
         else -> {

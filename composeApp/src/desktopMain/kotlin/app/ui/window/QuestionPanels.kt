@@ -171,11 +171,11 @@ private fun AnswerPanel(
                     answer.right.forEach { right ->
                         Text(right, fontSize = bodySize, color = Palette.PlayerAnsweringText, fontWeight = FontWeight.Bold)
                     }
-                    if (answer.wrong.isNotEmpty()) {
+                    if (panel.wrongAnswers.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
-                        Text("Also accepted:", fontSize = bodySize, color = Color.White)
-                        answer.wrong.forEach { wrong ->
-                            Text(wrong, fontSize = bodySize, color = Palette.ConfirmedText)
+                        Text("Wrong:", fontSize = bodySize, color = Color.White)
+                        panel.wrongAnswers.forEach { wrong ->
+                            Text(wrong, fontSize = bodySize, color = Palette.PlayerFailedText)
                         }
                     }
                     if (panel.items.isNotEmpty()) {

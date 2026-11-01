@@ -83,14 +83,6 @@ class DesktopSessionController(
         openedPack?.close()
     }
 
-    fun showDisplayWindow() {
-        uiState = uiState.copy(displayWindowVisible = true)
-    }
-
-    fun hideDisplayWindow() {
-        uiState = uiState.copy(displayWindowVisible = false)
-    }
-
     fun loadPackFromDialog() {
         val path = pickSiqFile() ?: return
         loadPack(path)

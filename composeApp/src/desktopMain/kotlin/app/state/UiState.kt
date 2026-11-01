@@ -10,7 +10,6 @@ data class DesktopUiState(
     val host: HostView,
     val sharedDisplay: SharedDisplayView,
     val session: HostSession,
-    val displayWindowVisible: Boolean = true,
 )
 
 /** The host's session fields that do not come from the game: pack, buzzer URL, messages, pack browser. */

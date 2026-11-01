@@ -2,6 +2,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
 import app.session.DesktopSessionController
 import app.ui.media.VlcSupport
@@ -24,17 +25,19 @@ fun main() {
 
         val uiState = controller.uiState
 
-        if (uiState.displayWindowVisible) {
-            Window(
-                onCloseRequest = controller::hideDisplayWindow,
-                title = "sick - display",
-            ) {
-                SharedDisplayApp(
-                    uiState.sharedDisplay,
-                    controller.audioPlayback,
-                    onMediaEnded = controller::mediaEnded,
-                )
-            }
+        // The Shared Display stays open for the whole session: only its Audio Player
+        // reports the end of audio, so closing it would stall every Media Hold.
+        val displayState = rememberWindowState()
+        Window(
+            onCloseRequest = { displayState.isMinimized = true },
+            state = displayState,
+            title = "sick - display",
+        ) {
+            SharedDisplayApp(
+                uiState.sharedDisplay,
+                controller.audioPlayback,
+                onMediaEnded = controller::mediaEnded,
+            )
         }
 
         Window(

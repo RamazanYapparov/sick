@@ -76,3 +76,17 @@ Run core tests:
 ```bash
 ./gradlew :core:test
 ```
+
+## Portable Windows exe
+
+```powershell
+.\gradlew.bat :composeApp:packagePortableExe
+```
+
+This writes `composeApp\build\compose\binaries\main\portable\sick.exe`, one file with the app, its Java runtime and libVLC inside. It needs nothing installed. The first start of a build unpacks it to `%LOCALAPPDATA%\sick\<build id>`. Later starts reuse that folder, and folders left by older builds are deleted. Logs go to `%LOCALAPPDATA%\sick\logs`.
+
+On Windows, Gradle downloads and checks a pinned libVLC build (`vlcVersion` in `composeApp/build.gradle.kts`). The app loads that libVLC in `run` and in packaged builds, not an installed VLC.
+
+## License
+
+sick is licensed under the GNU General Public License, version 3 (`LICENSE`). Packaged builds include libVLC, vlcj and other third-party components. Their licences and source code links are in `THIRD-PARTY-NOTICES.md`, which goes into every package together with `LICENSE` and VLC's `COPYING.txt`. A release that ships `sick.exe` must come with this repository's source code at the release tag. GitHub's release page attaches it automatically.

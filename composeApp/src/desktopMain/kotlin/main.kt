@@ -6,11 +6,17 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
 import app.session.DesktopSessionController
 import app.ui.media.VlcSupport
+import java.nio.file.Path
+import kotlin.io.path.isDirectory
 
 fun main() {
     // Must run before any vlcj component is touched (including ones
-    // indirectly referenced from Compose).
-    VlcSupport.initialize()
+    // indirectly referenced from Compose). Windows builds carry libVLC in the
+    // app resources (composeApp/build.gradle.kts); elsewhere the installed VLC is used.
+    val bundledVlc = System.getProperty("compose.application.resources.dir")
+        ?.let { Path.of(it, "vlc") }
+        ?.takeIf { it.isDirectory() }
+    VlcSupport.initialize(bundledVlc)
 
     application {
         val scope = rememberCoroutineScope()

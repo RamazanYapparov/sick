@@ -12,6 +12,7 @@ Domain terms (Shared Display, Buzz, Buzz Window, Reaction Time, Late Buzz, Host 
 ./gradlew :siq:test
 ./gradlew :composeApp:desktopTest
 ./gradlew :composeApp:run
+./gradlew :composeApp:packagePortableExe   # Windows only: one self-contained sick.exe (see README)
 ```
 
 **From WSL:** every module needs a JDK 21 toolchain, which is installed only on Windows, and Gradle on `/mnt/c` fails with I/O errors. Run the Windows wrapper instead: `cmd.exe /c "gradlew.bat :core:test --console=plain"`. Test reports land in `<module>/build/test-results/`.

@@ -1,6 +1,6 @@
 # sick
 
-Desktop quiz game host for SIQ question packs.
+Desktop quiz game host for SIQ question packs, the format made for [SIGame](https://github.com/VladimirKhil/SI).
 
 ## Modules
 
@@ -51,11 +51,23 @@ The app starts:
    - adjust scores manually
    - advance to the next round
 
-## Notes
+## SIQ packs
 
-- v1 supports regular questions only.
-- The host window shows the right answer for judging.
-- The shared display currently does not have a dedicated answer-reveal phase yet.
+sick plays `.siq` packs made for [SIGame](https://github.com/VladimirKhil/SI) by Vladimir Khil, for example in SIQuester. sick is a separate project, not affiliated with SIGame, and contains none of its code. The format is described by `siq_5.xsd` in that repository. sick does not include any packs: a pack's content belongs to its authors.
+
+Support for the format is partial. sick plays the regular rounds of a pack with:
+
+- regular questions: players buzz, answer aloud, and the host judges
+- text, image, audio and video content, from the pack or from a URL
+- answers with options (`answerType="select"`) and Point Answers on an image (`answerType="point"`)
+
+Everything else is left out when the pack loads:
+
+- final rounds
+- bet (stake) questions, cat-in-the-bag (secret) questions and no-risk questions
+- question types it does not know, and questions whose media file is missing from the pack
+
+"For all" questions are played as regular questions: the first to buzz answers. HTML content is not rendered. A pack with no regular round left does not load.
 
 ## Build
 

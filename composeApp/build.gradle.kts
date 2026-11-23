@@ -68,7 +68,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.sick"
-            packageVersion = "1.0.0"
+            packageVersion = "1.1.0"
             // jdeps (suggestRuntimeModules) finds all but java.naming, which logback's config loading needs.
             modules("java.instrument", "java.management", "java.naming", "java.sql", "jdk.unsupported")
             // libVLC for Windows lands in <app>/resources/vlc; main() loads it from there.

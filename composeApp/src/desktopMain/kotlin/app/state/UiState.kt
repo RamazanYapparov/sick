@@ -1,5 +1,6 @@
 package app.state
 
+import app.session.PackRecord
 import app.session.ScannedPackInfo
 
 /**
@@ -21,6 +22,8 @@ data class HostSession(
     val showPackBrowser: Boolean = false,
     val scannedPacks: List<ScannedPackInfo> = emptyList(),
     val isScanningPacks: Boolean = false,
+    /** Played and Finished per [ScannedPackInfo.key]. */
+    val packHistory: Map<String, PackRecord> = emptyMap(),
 )
 
 /** Reaction Time as seconds with millisecond precision, e.g. `2.340 s`. */

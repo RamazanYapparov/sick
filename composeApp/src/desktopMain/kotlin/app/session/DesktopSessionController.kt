@@ -41,7 +41,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
 import java.awt.EventQueue
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 
@@ -54,8 +56,15 @@ class DesktopSessionController(
     /** The loaded pack; its extracted media live until it is closed. */
     private var openedPack: OpenedPack? = null
     private var loadedPackPath: String? = null
+    /** The loaded Pack's [ScannedPackInfo.key]; null for the empty game. */
+    private var loadedPackKey: String? = null
     private var scannedPacks: List<ScannedPackInfo> = emptyList()
     private var isScanningPacks: Boolean = false
+    private val packHistory = PackHistory()
+
+    /** Where there is no Recycle Bin, deleting a pack is permanent. */
+    val canMoveToTrash: Boolean =
+        Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH)
 
     private var engine: GameEngine = createEngine(emptyPack())
     private var server: GameServer = GameServer(engine, port, buzzAllowed = { !engine.state.isTimerPaused })
@@ -118,6 +127,32 @@ class DesktopSessionController(
     fun chooseLocalPack(path: Path) {
         hidePackBrowser()
         loadPack(path)
+    }
+
+    /** Moves the pack file to the Recycle Bin, or deletes it where there is none. Its history is kept. */
+    fun deletePack(path: Path) {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    if (canMoveToTrash) {
+                        check(Desktop.getDesktop().moveToTrash(path.toFile())) { "Could not move $path to the Recycle Bin" }
+                    } else {
+                        Files.delete(path)
+                    }
+                }
+            }
+            result
+                .onSuccess {
+                    val remaining = scannedPacks.filterNot { it.path == path }
+                    scannedPacks = remaining
+                    updateSession { copy(scannedPacks = remaining) }
+                    setInfo("Deleted ${path.fileName}")
+                }
+                .onFailure { error ->
+                    logger.error(error) { "Failed to delete $path" }
+                    setError(error.message ?: "Failed to delete $path")
+                }
+        }
     }
 
     fun resetGame() {
@@ -202,6 +237,7 @@ class DesktopSessionController(
                 val previous = openedPack
                 openedPack = opened
                 loadedPackPath = path.toString()
+                loadedPackKey = PackScanner.scanFile(path)?.key
                 replaceSession(opened.pack)
                 // A media player may still hold one of its files; what is left is deleted at exit.
                 previous?.close()
@@ -277,7 +313,10 @@ class DesktopSessionController(
         val listener: (EngineTransition) -> Unit = { transition ->
             EventQueue.invokeLater {
                 targetPlayback.onTransition(transition)
-                if (targetPlayback === playback) publishState()
+                if (targetPlayback === playback) {
+                    loadedPackKey?.let { packHistory.record(it, transition, System.currentTimeMillis()) }
+                    publishState()
+                }
             }
         }
         target.addListener(listener)
@@ -311,6 +350,7 @@ class DesktopSessionController(
             loadedPackPath = loadedPackPath,
             scannedPacks = scannedPacks,
             isScanningPacks = isScanningPacks,
+            packHistory = packHistory.records,
         )
         return previous?.copy(host = host, sharedDisplay = sharedDisplay, session = session)
             ?: DesktopUiState(host, sharedDisplay, session)

@@ -157,6 +157,8 @@ internal fun HostWindowContent(controller: DesktopSessionController, view: HostV
     if (session.showPackBrowser) {
         PackBrowserDialog(
             scannedPacks = session.scannedPacks,
+            packHistory = session.packHistory,
+            canMoveToTrash = controller.canMoveToTrash,
             isScanning = session.isScanningPacks,
             onDismiss = controller::hidePackBrowser,
             onRefresh = controller::refreshLocalPacks,
@@ -165,6 +167,7 @@ internal fun HostWindowContent(controller: DesktopSessionController, view: HostV
                 controller.loadPackFromDialog()
             },
             onChoosePack = controller::chooseLocalPack,
+            onDeletePack = controller::deletePack,
         )
     }
 }

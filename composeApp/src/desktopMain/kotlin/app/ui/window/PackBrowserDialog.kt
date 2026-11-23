@@ -2,6 +2,7 @@
 
 package app.ui.window
 
+import app.session.PackRecord
 import app.session.ScannedPackInfo
 import app.session.ScannedRoundInfo
 import app.session.ScannedThemeInfo
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
@@ -37,8 +39,10 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
@@ -57,15 +61,21 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.awt.Toolkit
 import java.nio.file.Path
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun PackBrowserDialog(
     scannedPacks: List<ScannedPackInfo>,
+    packHistory: Map<String, PackRecord>,
+    canMoveToTrash: Boolean,
     isScanning: Boolean,
     onDismiss: () -> Unit,
     onRefresh: () -> Unit,
     onBrowseFiles: () -> Unit,
     onChoosePack: (Path) -> Unit,
+    onDeletePack: (Path) -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -194,7 +204,12 @@ internal fun PackBrowserDialog(
                         items(scannedPacks, key = { it.path.toString() }) { pack ->
                             PackRow(
                                 pack = pack,
+                                record = packHistory[pack.key],
+                                canMoveToTrash = canMoveToTrash,
+                                // A scan still running would put the deleted file back in the list.
+                                canDelete = !isScanning,
                                 onChoose = { onChoosePack(pack.path) },
+                                onDelete = { onDeletePack(pack.path) },
                             )
                         }
                     }
@@ -204,12 +219,35 @@ internal fun PackBrowserDialog(
     }
 }
 
+private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+
+private fun formatDate(epochMillis: Long): String =
+    dateFormat.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+
 @Composable
 private fun PackRow(
     pack: ScannedPackInfo,
+    record: PackRecord?,
+    canMoveToTrash: Boolean,
+    canDelete: Boolean,
     onChoose: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     var peekExpanded by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete ${pack.path.fileName}?") },
+            text = { Text("There is no Recycle Bin here: the file is deleted permanently.") },
+            confirmButton = {
+                Button(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+            },
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -246,6 +284,15 @@ private fun PackRow(
                         fontSize = 11.sp,
                         color = Palette.SecondaryText,
                     )
+                    Text(
+                        listOfNotNull(
+                            "Downloaded ${formatDate(pack.lastModified)}",
+                            record?.let { "Played ${formatDate(it.lastPlayedAt)}" } ?: "Not played",
+                            "Finished".takeIf { record?.finished == true },
+                        ).joinToString(" · "),
+                        fontSize = 11.sp,
+                        color = Palette.SecondaryText,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
@@ -266,6 +313,17 @@ private fun PackRow(
                         modifier = Modifier.height(34.dp),
                     ) {
                         Text("Choose", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    IconButton(
+                        onClick = { if (canMoveToTrash) onDelete() else confirmDelete = true },
+                        modifier = Modifier.size(34.dp),
+                        enabled = canDelete,
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = if (canMoveToTrash) "Move to Recycle Bin" else "Delete permanently",
+                            tint = Palette.SecondaryText,
+                        )
                     }
                 }
             }

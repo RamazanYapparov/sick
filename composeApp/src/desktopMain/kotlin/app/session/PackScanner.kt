@@ -10,6 +10,10 @@ import java.util.zip.ZipFile
 
 data class ScannedPackInfo(
     val path: Path,
+    /** The Pack's identity in [PackHistory]: its package id, else file name and size (docs/adr/0002). */
+    val key: String,
+    /** Epoch millis; browsers set it to when the download finished. */
+    val lastModified: Long,
     val packName: String,
     val author: String,
     val difficulty: String?,
@@ -48,7 +52,7 @@ object PackScanner {
             ?: emptyList()
     }
 
-    private fun scanFile(path: Path): ScannedPackInfo? {
+    fun scanFile(path: Path): ScannedPackInfo? {
         return try {
             ZipFile(path.toFile()).use { zipFile ->
                 val entry = zipFile.getEntry("content.xml")
@@ -75,8 +79,11 @@ object PackScanner {
                     )
                 } ?: emptyList()
 
+                val file = path.toFile()
                 ScannedPackInfo(
                     path = path,
+                    key = xmlPackage.id?.takeIf { it.isNotBlank() } ?: "${path.fileName}:${file.length()}",
+                    lastModified = file.lastModified(),
                     packName = xmlPackage.name ?: path.fileName.toString(),
                     author = xmlPackage.info?.authors?.author?.firstOrNull() ?: "",
                     difficulty = xmlPackage.difficulty,

@@ -59,3 +59,17 @@ _Avoid_: Media pending, waiting for media
 **Score Multiplier**:
 The scale (x0.5, x1 or x2) the host applies to the question price when accepting an answer. x0.5 rounds up, so an odd price never drops its last point. Only the host's controls show the multiplier; the Shared Display and phones see just the resulting score. A wrong answer always costs the full price.
 _Avoid_: Bonus, coefficient
+
+### Packs
+
+**Pack**:
+A SIQ quiz file the host runs a game from. A Pack is recognised by the id its author's editor wrote into it (by file name and size when it has none), so a re-downloaded copy under another file name is the same Pack. Whether it is Played or Finished belongs to the Pack, not the file: it outlives the file being deleted, and the Pack can be loaded from any folder.
+_Avoid_: Package, quiz file, SIQ
+
+**Played**:
+A Pack is Played once the host starts a game with it. Its last played date is the most recent such start; loading a Pack without starting does not count.
+_Avoid_: Used, opened
+
+**Finished**:
+A Pack is Finished once a game with it reaches the end of its last round, rounds the host skipped included. It stays Finished even if a later game with it is abandoned.
+_Avoid_: Completed (that means an answered question on the board), done
